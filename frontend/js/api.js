@@ -3,6 +3,9 @@
 // API configuration
 const API_BASE_URL = '/api';
 
+// Socket.IO connection
+let socket = null;
+
 // Generic fetch function with error handling
 const fetchWithErrorHandling = async (url, options = {}) => {
     try {
@@ -103,61 +106,58 @@ const eventAPI = {
     createEvent: (data) => api.post('/events', data)
 };
 
-// Socket.IO connection - Make it globally accessible
-window.socket = null;
-
 // Connect to Socket.IO server
 const connectWebSocket = () => {
-    if (window.socket) return window.socket;
+    if (socket) return socket;
     
-    window.socket = io();
+    socket = io();
     
-    window.socket.on('connect', () => {
+    socket.on('connect', () => {
         console.log('Socket.IO connected');
     });
     
-    window.socket.on('disconnect', () => {
+    socket.on('disconnect', () => {
         console.log('Socket.IO disconnected');
-        window.socket = null;
+        socket = null;
     });
     
-    window.socket.on('error', (error) => {
+    socket.on('error', (error) => {
         console.error('Socket.IO error:', error);
     });
     
-    return window.socket;
+    return socket;
 };
 
 // Subscribe to events
 const subscribeToEvent = (event, callback) => {
-    if (!window.socket) {
+    if (!socket) {
         connectWebSocket();
     }
     
-    window.socket.on(event, (data) => {
+    socket.on(event, (data) => {
         callback(data);
     });
 };
 
 // Unsubscribe from events
 const unsubscribeFromEvent = (event) => {
-    if (window.socket) {
-        window.socket.off(event);
+    if (socket) {
+        socket.off(event);
     }
 };
 
 // Join product-specific room
 const joinProductRoom = (productId) => {
-    if (!window.socket) {
+    if (!socket) {
         connectWebSocket();
     }
-    window.socket.emit('join', `product-${productId}`);
+    socket.emit('join', `product-${productId}`);
 };
 
 // Leave product-specific room
 const leaveProductRoom = (productId) => {
-    if (window.socket) {
-        window.socket.emit('leave', `product-${productId}`);
+    if (socket) {
+        socket.emit('leave', `product-${productId}`);
     }
 };
 

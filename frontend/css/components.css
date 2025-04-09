@@ -1098,6 +1098,22 @@
     font-weight: 500;
   }
   
+  /* New real-time update animation */
+  @keyframes newActivityAnimation {
+    from { 
+      background-color: rgba(46, 125, 50, 0.2);
+      transform: translateX(-5px);
+    }
+    to { 
+      background-color: transparent;
+      transform: translateX(0);
+    }
+  }
+  
+  .new-activity {
+    animation: newActivityAnimation 1s ease-out;
+  }
+  
   /* Responsive Adjustments */
   @media (max-width: 768px) {
     .filters-bar {

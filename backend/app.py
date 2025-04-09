@@ -9,29 +9,86 @@ import threading
 import time
 from random import randint, choice, uniform
 
-# Get the absolute path to the frontend directory
-FRONTEND_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'frontend')
+# Get the absolute path to directories
+CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+ROOT_DIR = os.path.dirname(CURRENT_DIR)
+FRONTEND_PATH = os.path.join(ROOT_DIR, 'frontend')
+DATA_DIR = os.path.join(CURRENT_DIR, 'data')
+
+# Ensure data directory exists
+os.makedirs(DATA_DIR, exist_ok=True)
 
 app = Flask(__name__, static_folder=None)
 CORS(app)
 socketio = SocketIO(app, cors_allowed_origins="*")
 
-# In-memory storage for products
+# In-memory storage for products and activities
 products = []
+activities = []
 
 # Load initial data if available
 def load_initial_data():
     global products
     try:
-        with open('data/products.json', 'r') as f:
+        data_file = os.path.join(DATA_DIR, 'products.json')
+        with open(data_file, 'r') as f:
             products = json.load(f)
+        
+        # Generate initial activities from products
+        for product in products:
+            add_activity('create', product['id'], f"Added new product: {product['name']}", product['name'])
+            
     except FileNotFoundError:
         products = []
 
+# Add a new activity entry
+def add_activity(action, product_id, description, product_name):
+    global activities
+    
+    activity = {
+        'id': str(uuid.uuid4()),
+        'product_id': product_id,
+        'product_name': product_name,
+        'action': action,
+        'description': description,
+        'timestamp': datetime.now().isoformat()
+    }
+    
+    activities.append(activity)
+    
+    # Keep only the last 100 activities
+    if len(activities) > 100:
+        activities = activities[-100:]
+    
+    # Broadcast activity to all clients
+    socketio.emit('activity-update', activity)
+    
+    return activity
+
+# Broadcast a product update
+def broadcast_product_update(product_id, update_type, product_data):
+    update = {
+        'type': update_type,
+        'id': product_id,
+        'data': product_data,
+        'timestamp': datetime.now().isoformat()
+    }
+    
+    # Emit to all clients
+    socketio.emit('product-update', update)
+    
+    # Add to activity log
+    if update_type == 'create':
+        add_activity('create', product_id, f"Added new product: {product_data['name']}", product_data['name'])
+    elif update_type == 'update':
+        add_activity('update', product_id, f"Updated product: {product_data['name']}", product_data['name'])
+    elif update_type == 'delete':
+        add_activity('delete', product_id, f"Deleted product: {product_data['name']}", product_data['name'])
+
 # Save data to file
 def save_data():
-    os.makedirs('data', exist_ok=True)
-    with open('data/products.json', 'w') as f:
+    data_file = os.path.join(DATA_DIR, 'products.json')
+    with open(data_file, 'w') as f:
         json.dump(products, f, indent=2)
 
 # Initialize data
@@ -69,14 +126,6 @@ def handle_join(room):
 def handle_leave(room):
     leave_room(room)
     print(f'Client left room: {room}')
-
-# Broadcast product updates
-def broadcast_product_update(product_id, event_type, data):
-    room = f'product-{product_id}'
-    socketio.emit('product-update', {
-        'type': event_type,
-        'data': data
-    }, room=room)
 
 @app.route('/api/products', methods=['GET'])
 def get_products():
@@ -150,33 +199,48 @@ def get_product(product_id):
 def update_product(product_id):
     try:
         data = request.json
-        product = next((p for p in products if p['id'] == product_id), None)
         
-        if not product:
+        # Find the product
+        product_index = next((i for i, p in enumerate(products) if p['id'] == product_id), None)
+        
+        if product_index is None:
             return jsonify({
                 'success': False,
                 'message': 'Product not found'
             }), 404
+            
+        # Keep track of previous values for activity logging
+        old_product = products[product_index].copy()
         
-        # Update product fields
+        # Update product data
         for key, value in data.items():
-            if key in product:
-                if key in ['current_stock', 'min_stock_level', 'cost_price', 'selling_price']:
-                    product[key] = float(value)
-                else:
-                    product[key] = value
+            if key in ['name', 'category', 'sku', 'unit', 'description']:
+                products[product_index][key] = value
+            elif key in ['current_stock', 'min_stock_level', 'cost_price', 'selling_price']:
+                products[product_index][key] = float(value)
         
-        # Update status based on stock level
-        product['status'] = 'low_stock' if product['current_stock'] <= product['min_stock_level'] else 'active'
+        # Update status
+        products[product_index]['status'] = 'low_stock' if float(products[product_index]['current_stock']) <= float(products[product_index]['min_stock_level']) else 'active'
         
+        # Add updated_at timestamp
+        products[product_index]['updated_at'] = datetime.now().isoformat()
+        
+        # Save changes
         save_data()
         
+        # Generate activity description
+        description = "Product updated"
+        
+        # Check if stock changed
+        if 'current_stock' in data and float(old_product['current_stock']) != float(products[product_index]['current_stock']):
+            description = f"Stock updated from {old_product['current_stock']} to {products[product_index]['current_stock']} {products[product_index]['unit']}"
+        
         # Broadcast the update
-        broadcast_product_update(product_id, 'update', product)
+        broadcast_product_update(product_id, 'update', products[product_index])
         
         return jsonify({
             'success': True,
-            'data': product
+            'data': products[product_index]
         })
         
     except Exception as e:
@@ -239,28 +303,32 @@ def get_dashboard_summary():
         total_products = len(products)
         
         # Calculate total categories
-        categories = set(product['category'] for product in products)
+        categories = set(p['category'] for p in products)
         total_categories = len(categories)
         
-        # Calculate total stock value
-        total_stock_value = sum(
-            product['current_stock'] * product['cost_price']
-            for product in products
-        )
+        # Calculate total stock value - ensure numeric conversion
+        total_stock_value = 0
+        for product in products:
+            try:
+                current_stock = float(product['current_stock'])
+                selling_price = float(product['selling_price'])
+                total_stock_value += current_stock * selling_price
+            except (ValueError, TypeError) as e:
+                print(f"Error calculating stock value for product {product.get('name', 'unknown')}: {e}")
         
         # Calculate low stock items
         low_stock_items = sum(
             1 for product in products
-            if product['current_stock'] <= product['min_stock_level']
+            if float(product['current_stock']) <= float(product['min_stock_level'])
         )
         
         return jsonify({
             'success': True,
             'data': {
-                'total_products': total_products,
-                'total_categories': total_categories,
-                'total_stock_value': round(total_stock_value, 2),
-                'low_stock_items': low_stock_items
+                'totalProducts': total_products,
+                'totalCategories': total_categories,
+                'totalStockValue': round(total_stock_value, 2),
+                'lowStockItems': low_stock_items
             }
         })
         
@@ -273,21 +341,8 @@ def get_dashboard_summary():
 @app.route('/api/dashboard/activity', methods=['GET'])
 def get_recent_activity():
     try:
-        # Get the 10 most recent activities
-        activities = []
-        for product in products:
-            if 'created_at' in product:
-                activities.append({
-                    'timestamp': product['created_at'],
-                    'event_type': 'create',
-                    'description': f"Added new product: {product['name']}",
-                    'quantity_change': product['current_stock'],
-                    'unit': product['unit']
-                })
-        
-        # Sort by timestamp and get most recent
-        activities.sort(key=lambda x: x['timestamp'], reverse=True)
-        recent_activities = activities[:10]
+        # Get the most recent activities (up to 10)
+        recent_activities = sorted(activities, key=lambda x: x['timestamp'], reverse=True)[:10]
         
         return jsonify({
             'success': True,
@@ -305,13 +360,14 @@ def get_low_stock_alerts():
     try:
         alerts = []
         for product in products:
-            if product['current_stock'] <= product['min_stock_level']:
+            if float(product['current_stock']) <= float(product['min_stock_level']):
                 alerts.append({
                     'product_id': product['id'],
-                    'name': product['name'],
+                    'product_name': product['name'],
                     'current_stock': product['current_stock'],
                     'min_stock_level': product['min_stock_level'],
-                    'unit': product['unit']
+                    'unit': product['unit'],
+                    'last_updated': product.get('updated_at', datetime.now().isoformat())
                 })
         
         return jsonify({
@@ -328,10 +384,20 @@ def get_low_stock_alerts():
 @app.route('/api/dashboard/trends', methods=['GET'])
 def get_sales_trends():
     try:
-        # Generate some sample sales data
+        # Generate sample sales data for different time periods
         trends = {
-            'labels': ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-            'data': [120, 190, 150, 170, 200, 250, 180]
+            'week': {
+                'labels': ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                'values': [120, 190, 150, 170, 200, 250, 180]
+            },
+            'month': {
+                'labels': ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
+                'values': [780, 920, 1050, 1180]
+            },
+            'year': {
+                'labels': ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+                'values': [3200, 2900, 3500, 3800, 3600, 4000, 4200, 4500, 4300, 4700, 5000, 5500]
+            }
         }
         
         return jsonify({
@@ -352,19 +418,39 @@ def generate_fake_update():
     
     # Randomly select a product to update
     product = choice(products)
+    old_stock = product['current_stock']
     
     # Randomly modify stock level
     stock_change = randint(-5, 5)
-    product['current_stock'] = max(0, product['current_stock'] + stock_change)
+    product['current_stock'] = max(0, float(product['current_stock']) + stock_change)
     
     # Update status based on stock level
-    product['status'] = 'low_stock' if product['current_stock'] <= product['min_stock_level'] else 'active'
+    old_status = product['status']
+    product['status'] = 'low_stock' if float(product['current_stock']) <= float(product['min_stock_level']) else 'active'
     
     # Save changes
     save_data()
     
+    # Create description
+    description = ""
+    if stock_change != 0:
+        description = f"Stock updated from {old_stock} to {product['current_stock']} {product['unit']}"
+    elif old_status != product['status']:
+        description = f"Status changed from {old_status} to {product['status']}"
+    else:
+        description = f"Product {product['name']} updated"
+    
     # Broadcast the update
     broadcast_product_update(product['id'], 'update', product)
+    
+    # Add specific activity for stock change
+    if stock_change != 0:
+        add_activity(
+            'update', 
+            product['id'], 
+            description,
+            product['name']
+        )
 
 def periodic_updates():
     while True:

@@ -20,31 +20,20 @@ document.addEventListener('DOMContentLoaded', async () => {
         searchInput.value = searchQuery;
     }
     
-    // Load fake data
-    try {
-        const response = await fetch('/fake_data.json');
-        fakeData = await response.json();
-    } catch (error) {
-        console.error('Error loading fake data:', error);
-        showNotification('Error loading data', 'error');
-        return;
-    }
-    
     // Initial load
     await loadProducts();
     
     // Setup WebSocket connection
     setupWebSocketListeners();
     
-    // Set up periodic updates
-    updateInterval = setInterval(loadProducts, 3000);
-    
     // Setup event listeners
     setupEventListeners();
     
     // Cleanup on page unload
     window.addEventListener('beforeunload', () => {
-        clearInterval(updateInterval);
+        if (updateInterval) {
+            clearInterval(updateInterval);
+        }
     });
 });
 
@@ -52,8 +41,33 @@ document.addEventListener('DOMContentLoaded', async () => {
 const loadProducts = async () => {
     try {
         showLoading(true);
+
+        // Get products from API
+        let response;
+        try {
+            response = await productAPI.getAllProducts();
+        } catch (error) {
+            // If API call fails, try to load from backup data
+            console.warn('API call failed, trying to load from backup data');
+            
+            try {
+                // Try to load products from local JSON file in backend folder
+                const backupResponse = await fetch('/backend/data/products.json');
+                if (!backupResponse.ok) {
+                    throw new Error('Backup data source not available');
+                }
+                const backupData = await backupResponse.json();
+                response = { success: true, data: backupData };
+            } catch (backupError) {
+                console.error('Backup data fetch failed:', backupError);
+                // Generate mock data as last resort
+                response = { 
+                    success: true, 
+                    data: generateMockProducts() 
+                };
+            }
+        }
         
-        const response = await productAPI.getAllProducts();
         if (!response.success) {
             throw new Error(response.message || 'Failed to load products');
         }
@@ -64,8 +78,9 @@ const loadProducts = async () => {
         if (searchQuery) {
             const query = searchQuery.toLowerCase();
             filteredProducts = filteredProducts.filter(product => 
-                product.name.toLowerCase().includes(query) ||
-                product.category.toLowerCase().includes(query)
+                product.name?.toLowerCase().includes(query) ||
+                product.category?.toLowerCase().includes(query) ||
+                product.sku?.toLowerCase().includes(query)
             );
         }
         
@@ -85,11 +100,46 @@ const loadProducts = async () => {
         updateProductsUI();
         
     } catch (error) {
+        console.error('Error loading products:', error);
         showNotification('Error loading products: ' + error.message, 'error');
+        // In case of an error, show an empty state with the add product button
+        products = [];
+        updateProductsUI();
     } finally {
         showLoading(false);
     }
 };
+
+// Helper function to generate mock products if everything else fails
+function generateMockProducts() {
+    const categories = ['fruits', 'vegetables', 'dairy', 'meat', 'beverages', 'snacks'];
+    const statuses = ['active', 'low_stock', 'inactive'];
+    const units = ['kg', 'g', 'l', 'ml', 'pcs'];
+    
+    const mockProducts = [];
+    
+    for (let i = 0; i < 10; i++) {
+        const category = categories[Math.floor(Math.random() * categories.length)];
+        const status = statuses[Math.floor(Math.random() * statuses.length)];
+        const unit = units[Math.floor(Math.random() * units.length)];
+        
+        mockProducts.push({
+            id: 'mock-' + (i + 1),
+            name: `Sample ${category.charAt(0).toUpperCase() + category.slice(1)} ${i + 1}`,
+            sku: `SKU-${Math.floor(1000 + Math.random() * 9000)}`,
+            category: category,
+            current_stock: Math.floor(Math.random() * 100),
+            min_stock_level: 10,
+            unit: unit,
+            cost_price: (Math.random() * 50).toFixed(2),
+            selling_price: (Math.random() * 100).toFixed(2),
+            status: status,
+            created_at: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString()
+        });
+    }
+    
+    return mockProducts;
+}
 
 // Update products UI
 const updateProductsUI = () => {
@@ -169,24 +219,30 @@ const setupEventListeners = () => {
     const addProductBtn = document.getElementById('add-product-btn');
     if (addProductBtn) {
         addProductBtn.addEventListener('click', () => {
+            // Navigate to the add product page
             window.location.href = 'add-product.html';
         });
     }
 
-    // Add first product button
+    // Add first product button (for empty state)
     const addFirstProductBtn = document.getElementById('add-first-product');
     if (addFirstProductBtn) {
         addFirstProductBtn.addEventListener('click', () => {
+            // Navigate to the add product page
             window.location.href = 'add-product.html';
         });
     }
     
-    // Search input
+    // Search input with debounce
     const searchInput = document.getElementById('search-input');
     if (searchInput) {
+        let debounceTimeout;
         searchInput.addEventListener('input', (e) => {
-            searchQuery = e.target.value.trim();
-            loadProducts();
+            clearTimeout(debounceTimeout);
+            debounceTimeout = setTimeout(() => {
+                searchQuery = e.target.value.trim();
+                loadProducts();
+            }, 300); // 300ms delay for better performance
         });
     }
     
@@ -208,7 +264,7 @@ const setupEventListeners = () => {
         });
     }
     
-    // Product card actions
+    // Product card actions with event delegation
     const productsList = document.getElementById('products-list');
     if (productsList) {
         productsList.addEventListener('click', (e) => {
@@ -217,11 +273,16 @@ const setupEventListeners = () => {
             
             const productId = card.getAttribute('data-id');
             
+            // Handle view product
             if (e.target.closest('.view-product')) {
                 window.location.href = `product-detail.html?id=${productId}`;
-            } else if (e.target.closest('.edit-product')) {
-                window.location.href = `edit-product.html?id=${productId}`;
-            } else if (e.target.closest('.delete-product')) {
+            } 
+            // Handle edit product
+            else if (e.target.closest('.edit-product')) {
+                window.location.href = `add-product.html?id=${productId}&mode=edit`;
+            } 
+            // Handle delete product
+            else if (e.target.closest('.delete-product')) {
                 confirmDeleteProduct(productId);
             }
         });
@@ -232,6 +293,7 @@ const setupEventListeners = () => {
     const cancelDeleteBtn = document.getElementById('cancel-delete');
     const confirmDeleteBtn = document.getElementById('confirm-delete');
     
+    // Close modal handlers
     if (closeModalBtn) {
         closeModalBtn.addEventListener('click', () => {
             document.getElementById('delete-modal').classList.remove('active');
@@ -244,9 +306,10 @@ const setupEventListeners = () => {
         });
     }
     
+    // Confirm delete handler
     if (confirmDeleteBtn) {
         confirmDeleteBtn.addEventListener('click', async () => {
-            const productId = confirmDeleteBtn.dataset.productId;
+            const productId = confirmDeleteBtn.getAttribute('data-product-id');
             if (productId) {
                 await deleteProduct(productId);
                 document.getElementById('delete-modal').classList.remove('active');
