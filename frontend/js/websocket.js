@@ -1,14 +1,21 @@
 // WebSocket connection handling
-let socket;
+// Don't redeclare socket if it exists from api.js
 let eventHandlers = {};
 let reconnectTimer;
 let isConnected = false;
 
 // Initialize WebSocket connection
 const initWebSocket = () => {
-  // Connect to the backend WebSocket server
-  const serverUrl = 'http://localhost:5000'; // Change in production
-  socket = io(serverUrl);
+  // Use the existing socket if already connected from api.js
+  if (window.socket) {
+    socket = window.socket;
+    isConnected = socket.connected;
+  } else {
+    // Connect to the backend WebSocket server
+    const serverUrl = 'http://localhost:5000'; // Change in production
+    socket = io(serverUrl);
+    window.socket = socket;
+  }
   
   // Connection event handlers
   socket.on('connect', () => {

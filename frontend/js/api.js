@@ -1,7 +1,7 @@
 // API service for communicating with the backend
 
 // API configuration
-const API_BASE_URL = 'http://localhost:5000/api';
+const API_BASE_URL = '/api';
 
 // Generic fetch function with error handling
 const fetchWithErrorHandling = async (url, options = {}) => {
@@ -103,59 +103,61 @@ const eventAPI = {
     createEvent: (data) => api.post('/events', data)
 };
 
-// Socket.IO connection
-let socket = null;
+// Socket.IO connection - Make it globally accessible
+window.socket = null;
 
 // Connect to Socket.IO server
 const connectWebSocket = () => {
-    if (socket) return;
+    if (window.socket) return window.socket;
     
-    socket = io(API_BASE_URL);
+    window.socket = io();
     
-    socket.on('connect', () => {
+    window.socket.on('connect', () => {
         console.log('Socket.IO connected');
     });
     
-    socket.on('disconnect', () => {
+    window.socket.on('disconnect', () => {
         console.log('Socket.IO disconnected');
-        socket = null;
+        window.socket = null;
     });
     
-    socket.on('error', (error) => {
+    window.socket.on('error', (error) => {
         console.error('Socket.IO error:', error);
     });
+    
+    return window.socket;
 };
 
 // Subscribe to events
 const subscribeToEvent = (event, callback) => {
-    if (!socket) {
+    if (!window.socket) {
         connectWebSocket();
     }
     
-    socket.on(event, (data) => {
+    window.socket.on(event, (data) => {
         callback(data);
     });
 };
 
 // Unsubscribe from events
 const unsubscribeFromEvent = (event) => {
-    if (socket) {
-        socket.off(event);
+    if (window.socket) {
+        window.socket.off(event);
     }
 };
 
 // Join product-specific room
 const joinProductRoom = (productId) => {
-    if (!socket) {
+    if (!window.socket) {
         connectWebSocket();
     }
-    socket.emit('join', `product-${productId}`);
+    window.socket.emit('join', `product-${productId}`);
 };
 
 // Leave product-specific room
 const leaveProductRoom = (productId) => {
-    if (socket) {
-        socket.emit('leave', `product-${productId}`);
+    if (window.socket) {
+        window.socket.emit('leave', `product-${productId}`);
     }
 };
 
@@ -163,6 +165,13 @@ const leaveProductRoom = (productId) => {
 window.productAPI = productAPI;
 window.dashboardAPI = dashboardAPI;
 window.eventAPI = eventAPI;
+window.subscribeToEvent = subscribeToEvent;
+window.unsubscribeFromEvent = unsubscribeFromEvent;
+window.joinProductRoom = joinProductRoom;
+window.leaveProductRoom = leaveProductRoom;
+
+// Export WebSocket functions
+window.connectWebSocket = connectWebSocket;
 window.subscribeToEvent = subscribeToEvent;
 window.unsubscribeFromEvent = unsubscribeFromEvent;
 window.joinProductRoom = joinProductRoom;

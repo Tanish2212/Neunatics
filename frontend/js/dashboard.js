@@ -122,6 +122,56 @@ const updateTrendsUI = (trends) => {
     updateSalesChart(trends);
 };
 
+// Add the missing updateSalesChart function
+const updateSalesChart = (trends) => {
+    const salesChart = document.getElementById('sales-chart');
+    
+    if (!salesChart) {
+        console.error('Sales chart canvas element not found');
+        return;
+    }
+    
+    // If chart already exists, destroy it before creating a new one
+    if (window.salesChartInstance) {
+        window.salesChartInstance.destroy();
+    }
+    
+    // Create chart
+    window.salesChartInstance = new Chart(salesChart.getContext('2d'), {
+        type: 'line',
+        data: {
+            labels: trends.labels || [],
+            datasets: [{
+                label: 'Sales',
+                data: trends.data || [],
+                backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                borderColor: 'rgba(54, 162, 235, 1)',
+                borderWidth: 2,
+                tension: 0.4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Amount ($)'
+                    }
+                },
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Date'
+                    }
+                }
+            }
+        }
+    });
+};
+
 // Setup WebSocket listeners
 const setupWebSocketListeners = () => {
     // Listen for real-time updates
