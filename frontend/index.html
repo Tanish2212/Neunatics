@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Food Inventory Management</title>
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/components.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <header>
+        <nav class="navbar">
+            <div class="logo">Food Inventory Management</div>
+            <ul class="nav-links">
+                <li class="nav-item active" data-page="dashboard">
+                    <span class="material-icons">dashboard</span>
+                    <a href="index.html">Dashboard</a>
+                </li>
+                <li class="nav-item" data-page="products">
+                    <span class="material-icons">inventory</span>
+                    <a href="pages/products.html">Products</a>
+                </li>
+                <li class="nav-item" data-page="analytics">
+                    <span class="material-icons">bar_chart</span>
+                    <a href="pages/analytics.html">Analytics</a>
+                </li>
+            </ul>
+        </nav>
+    </header>
+
+    <main class="container">
+        <section class="dashboard-section">
+            <div class="page-header">
+                <h1>Dashboard</h1>
+                <div class="last-updated">
+                    <span class="material-icons">update</span>
+                    <span id="last-updated-time">Last updated: Just now</span>
+                </div>
+            </div>
+
+            <!-- Summary Cards -->
+            <div class="summary-grid">
+                <div class="summary-card">
+                    <div class="card-icon">
+                        <span class="material-icons">inventory</span>
+                    </div>
+                    <div class="card-content">
+                        <h3>Total Products</h3>
+                        <p id="total-products">-</p>
+                    </div>
+                </div>
+
+                <div class="summary-card">
+                    <div class="card-icon">
+                        <span class="material-icons">category</span>
+                    </div>
+                    <div class="card-content">
+                        <h3>Categories</h3>
+                        <p id="total-categories">-</p>
+                    </div>
+                </div>
+
+                <div class="summary-card">
+                    <div class="card-icon">
+                        <span class="material-icons">attach_money</span>
+                    </div>
+                    <div class="card-content">
+                        <h3>Total Stock Value</h3>
+                        <p id="total-stock-value">-</p>
+                    </div>
+                </div>
+
+                <div class="summary-card alert">
+                    <div class="card-icon">
+                        <span class="material-icons">warning</span>
+                    </div>
+                    <div class="card-content">
+                        <h3>Low Stock Items</h3>
+                        <p id="low-stock-items">-</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Content Grid -->
+            <div class="dashboard-grid">
+                <!-- Recent Activity -->
+                <div class="dashboard-card">
+                    <div class="card-header">
+                        <h2>Recent Activity</h2>
+                        <button class="btn btn-text" id="view-all-activity">
+                            View All
+                        </button>
+                    </div>
+                    <div class="card-content">
+                        <ul class="activity-list" id="recent-activity-list">
+                            <!-- Activity items will be populated dynamically -->
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Low Stock Alerts -->
+                <div class="dashboard-card">
+                    <div class="card-header">
+                        <h2>Low Stock Alerts</h2>
+                        <button class="btn btn-text" id="view-all-alerts">
+                            View All
+                        </button>
+                    </div>
+                    <div class="card-content">
+                        <ul class="alerts-list" id="low-stock-alerts">
+                            <!-- Alert items will be populated dynamically -->
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Sales Trends -->
+                <div class="dashboard-card full-width">
+                    <div class="card-header">
+                        <h2>Sales Trends</h2>
+                        <div class="chart-controls">
+                            <button class="btn btn-text active" data-period="week">Week</button>
+                            <button class="btn btn-text" data-period="month">Month</button>
+                            <button class="btn btn-text" data-period="year">Year</button>
+                        </div>
+                    </div>
+                    <div class="card-content">
+                        <canvas id="sales-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script src="js/utils.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/dashboard.js"></script>
+</body>
+</html>

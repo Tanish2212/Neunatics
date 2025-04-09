@@ -1,0 +1,178 @@
+/* Main styles */
+:root {
+    --primary-color: #2E7D32;
+    --primary-light: #60ad5e;
+    --primary-dark: #005005;
+    --secondary-color: #1976D2;
+    --secondary-light: #63a4ff;
+    --secondary-dark: #004ba0;
+    --text-primary: #212121;
+    --text-secondary: #757575;
+    --background-color: #F5F5F5;
+    --card-background: #FFFFFF;
+    --border-color: #E0E0E0;
+    --error-color: #F44336;
+    --warning-color: #FF9800;
+    --success-color: #4CAF50;
+    --shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    --border-radius: 8px;
+    --spacing-xs: 4px;
+    --spacing-sm: 8px;
+    --spacing-md: 16px;
+    --spacing-lg: 24px;
+    --spacing-xl: 32px;
+  }
+  
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+  
+  body {
+    font-family: 'Roboto', sans-serif;
+    font-size: 16px;
+    line-height: 1.5;
+    color: var(--text-primary);
+    background-color: var(--background-color);
+    margin: 0;
+    padding: 0;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  
+  a {
+    text-decoration: none;
+    color: inherit;
+  }
+  
+  ul, ol {
+    list-style-type: none;
+  }
+  
+  .container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: var(--spacing-lg);
+    min-height: calc(100vh - 64px);
+    padding-bottom: 80px; /* Space for real-time panel */
+  }
+  
+  /* Typography */
+  h1, h2, h3, h4, h5, h6 {
+    margin-bottom: var(--spacing-md);
+    font-weight: 600;
+    line-height: 1.2;
+  }
+  
+  .page-title {
+    font-size: 2rem;
+    margin: var(--spacing-lg) 0;
+    color: var(--primary-color);
+  }
+  
+  .text-center {
+    text-align: center;
+  }
+  
+  /* Grid System */
+  .grid-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: var(--spacing-lg);
+    margin-bottom: var(--spacing-lg);
+  }
+  
+  .grid-item {
+    width: 100%;
+  }
+  
+  .grid-item.full-width {
+    grid-column: 1 / -1;
+  }
+  
+  .form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: var(--spacing-md);
+    margin-bottom: var(--spacing-lg);
+  }
+  
+  /* Utilities */
+  .hidden {
+    display: none !important;
+  }
+  
+  .loading {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100px;
+  }
+  
+  .loading::after {
+    content: '';
+    width: 40px;
+    height: 40px;
+    border: 4px solid var(--border-color);
+    border-top-color: var(--primary-color);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+  
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+  
+  /* Page-specific */
+  .page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--spacing-lg);
+  }
+  
+  /* Product Detail Page */
+  .product-info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: var(--spacing-md);
+  }
+  
+  .info-item {
+    margin-bottom: var(--spacing-md);
+  }
+  
+  .info-label {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    margin-bottom: var(--spacing-xs);
+  }
+  
+  .info-value {
+    font-size: 1rem;
+    font-weight: 500;
+  }
+  
+  .nutrition-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  
+  .nutrition-table th,
+  .nutrition-table td {
+    padding: var(--spacing-sm);
+    text-align: left;
+    border-bottom: 1px solid var(--border-color);
+  }
+  
+  .nutrition-table th {
+    font-weight: 500;
+    background-color: rgba(0, 0, 0, 0.02);
+  }
+  
+  /* Chart containers */
+  .chart-container {
+    height: 300px;
+    position: relative;
+  }

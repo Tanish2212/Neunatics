@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analytics - Food Inventory Management</title>
+    <link rel="stylesheet" href="../css/main.css">
+    <link rel="stylesheet" href="../css/components.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+</head>
+<body>
+    <header>
+        <nav class="navbar">
+            <div class="logo">Food Inventory Management</div>
+            <ul class="nav-links">
+                <li class="nav-item" data-page="dashboard">
+                    <span class="material-icons">dashboard</span>
+                    <a href="../index.html">Dashboard</a>
+                </li>
+                <li class="nav-item" data-page="products">
+                    <span class="material-icons">inventory</span>
+                    <a href="products.html">Products</a>
+                </li>
+                <li class="nav-item active" data-page="analytics">
+                    <span class="material-icons">bar_chart</span>
+                    <a href="analytics.html">Analytics</a>
+                </li>
+            </ul>
+        </nav>
+    </header>
+
+    <main class="container" id="app-container">
+        <section id="analytics-content">
+            <h1 class="page-title">Analytics Dashboard</h1>
+            
+            <div class="grid-container">
+                <div class="grid-item">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Inventory Trends</h3>
+                        </div>
+                        <div class="card-content chart-container">
+                            <canvas id="inventory-trends-chart"></canvas>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="grid-item">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Category Distribution</h3>
+                        </div>
+                        <div class="card-content chart-container">
+                            <canvas id="category-distribution-chart"></canvas>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="grid-item full-width">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Low Stock Alerts</h3>
+                        </div>
+                        <div class="card-content">
+                            <table class="data-table" id="low-stock-table">
+                                <thead>
+                                    <tr>
+                                        <th>Product Name</th>
+                                        <th>Category</th>
+                                        <th>Current Stock</th>
+                                        <th>Minimum Stock</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="low-stock-table-body">
+                                    <tr>
+                                        <td colspan="5" class="text-center">Loading data...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Real-time updates panel -->
+    <div class="real-time-panel" id="real-time-panel">
+        <div class="real-time-header">
+            <div class="header-title">
+                <span class="material-icons">notifications</span>
+                <span>Real-time Updates</span>
+                <span class="badge" id="unread-count">0</span>
+            </div>
+            <div class="header-controls">
+                <span class="material-icons" id="clear-notifications">close</span>
+                <span class="material-icons" id="toggle-panel">expand_less</span>
+            </div>
+        </div>
+        <div class="real-time-content" id="notifications-content">
+            <ul class="notifications-list" id="notifications">
+                <li class="notification-item">No recent updates</li>
+            </ul>
+        </div>
+    </div>
+
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="../js/utils.js"></script>
+    <script src="../js/api.js"></script>
+    <script src="../js/websocket.js"></script>
+    <script src="../js/analytics.js"></script>
+</body>
+</html>

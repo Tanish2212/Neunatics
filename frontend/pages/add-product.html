@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add Product - Food Inventory Management</title>
+    <link rel="stylesheet" href="../css/main.css">
+    <link rel="stylesheet" href="../css/components.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+</head>
+<body>
+    <header>
+        <nav class="navbar">
+            <div class="logo">Food Inventory Management</div>
+            <ul class="nav-links">
+                <li class="nav-item" data-page="dashboard">
+                    <span class="material-icons">dashboard</span>
+                    <a href="../index.html">Dashboard</a>
+                </li>
+                <li class="nav-item active" data-page="products">
+                    <span class="material-icons">inventory</span>
+                    <a href="products.html">Products</a>
+                </li>
+                <li class="nav-item" data-page="analytics">
+                    <span class="material-icons">bar_chart</span>
+                    <a href="analytics.html">Analytics</a>
+                </li>
+            </ul>
+        </nav>
+    </header>
+
+    <main class="container">
+        <section class="form-section">
+            <div class="page-header">
+                <button class="btn btn-text" id="back-button">
+                    <span class="material-icons">arrow_back</span>
+                    Back to Products
+                </button>
+                <h1>Add New Product</h1>
+            </div>
+
+            <form id="add-product-form" class="product-form">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="product-name">Product Name</label>
+                        <input type="text" id="product-name" name="name" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="product-category">Category</label>
+                        <select id="product-category" name="category" required>
+                            <option value="">Select Category</option>
+                            <option value="fruits">Fruits</option>
+                            <option value="vegetables">Vegetables</option>
+                            <option value="dairy">Dairy</option>
+                            <option value="meat">Meat</option>
+                            <option value="beverages">Beverages</option>
+                            <option value="snacks">Snacks</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="product-sku">SKU</label>
+                        <input type="text" id="product-sku" name="sku" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="product-unit">Unit</label>
+                        <select id="product-unit" name="unit" required>
+                            <option value="">Select Unit</option>
+                            <option value="kg">Kilogram (kg)</option>
+                            <option value="g">Gram (g)</option>
+                            <option value="l">Liter (l)</option>
+                            <option value="ml">Milliliter (ml)</option>
+                            <option value="pcs">Pieces (pcs)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="product-stock">Initial Stock</label>
+                        <input type="number" id="product-stock" name="current_stock" min="0" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="product-min-stock">Minimum Stock Level</label>
+                        <input type="number" id="product-min-stock" name="min_stock_level" min="0" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="product-cost-price">Cost Price</label>
+                        <input type="number" id="product-cost-price" name="cost_price" min="0" step="0.01" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="product-selling-price">Selling Price</label>
+                        <input type="number" id="product-selling-price" name="selling_price" min="0" step="0.01" required>
+                    </div>
+
+                    <div class="form-group full-width">
+                        <label for="product-description">Description</label>
+                        <textarea id="product-description" name="description" rows="4"></textarea>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" class="btn btn-text" id="cancel-button">Cancel</button>
+                    <button type="submit" class="btn btn-primary">
+                        <span class="material-icons">save</span>
+                        Save Product
+                    </button>
+                </div>
+            </form>
+        </section>
+    </main>
+
+    <script src="../js/utils.js"></script>
+    <script src="../js/api.js"></script>
+    <script src="../js/add-product.js"></script>
+</body>
+</html> 
