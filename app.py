@@ -1,29 +1,40 @@
 """
 Food Inventory Management System
 
-This script integrates and runs the backend with Flask and Flask-SocketIO.
-It serves the frontend files from the frontend/ directory.
+This is a redirection script to help users use the correct application.
+The main application is now located in the backend directory.
 
 Run the application with:
+    cd backend
     python app.py
 """
 
 import os
 import sys
+import subprocess
 
-# Add the backend directory to the Python path
-backend_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'backend')
-sys.path.insert(0, backend_dir)
+print("\n===============================================")
+print(" Food Inventory Management System")
+print("===============================================")
+print(" NOTICE: The application structure has changed.")
+print(" Please use one of the following methods to run the app:")
+print("")
+print(" 1. cd backend")
+print("    python app.py")
+print("")
+print(" 2. Use the provided scripts:")
+print("    - Windows: run.bat")
+print("    - Linux/Mac: ./run.sh")
+print("===============================================\n")
 
-from backend.app import app, socketio
-
-if __name__ == '__main__':
-    print("\n===============================================")
-    print(" Food Inventory Management System")
-    print("===============================================")
-    print(" Server starting...")
-    print(" Access the application at http://localhost:5000")
-    print("===============================================\n")
-    
-    # Run the Flask app with SocketIO
-    socketio.run(app, debug=True, host='0.0.0.0', port=5000) 
+# Ask if user wants to run the app now
+choice = input("Would you like to run the application now? (y/n): ")
+if choice.lower() == 'y':
+    print("Starting the application...")
+    try:
+        # Navigate to backend and run the app
+        backend_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'backend')
+        os.chdir(backend_dir)
+        subprocess.call([sys.executable, "app.py"])
+    except KeyboardInterrupt:
+        print("\nApplication stopped.") 

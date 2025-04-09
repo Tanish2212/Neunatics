@@ -94,7 +94,7 @@ def generate_products(num_products=30):
         sales_count = random.randint(0, 500)
         
         product = {
-            'id': i + 1,
+            'id': str(i + 1),  # Ensure ID is a string to match backend expectation
             'name': fake.word().capitalize() + ' ' + category.capitalize(),
             'sku': f'SKU-{fake.bothify(text="??####")}',
             'category': category,
@@ -113,7 +113,12 @@ def generate_products(num_products=30):
     return products
 
 if __name__ == "__main__":
-    # Generate data with 5 companies, each having 3 products
-    fake_data = generate_fake_data(num_companies=5, products_per_company=3)
-    save_to_json(fake_data)
-    print("Fake data generated and saved to fake_data.json") 
+    # Generate products data
+    products_data = generate_products(num_products=30)
+    
+    # Save to the correct location for the backend
+    products_file = os.path.join('backend', 'data', 'products.json')
+    with open(products_file, 'w') as f:
+        json.dump(products_data, f, indent=2)
+    
+    print(f"Generated {len(products_data)} products and saved to {products_file}") 

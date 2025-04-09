@@ -3,6 +3,8 @@ from flask_cors import CORS
 from flask_socketio import SocketIO, emit, join_room, leave_room
 import json
 import os
+import sys
+import subprocess
 from datetime import datetime
 import uuid
 import threading
@@ -18,6 +20,57 @@ DATA_DIR = os.path.join(CURRENT_DIR, 'data')
 # Ensure data directory exists
 os.makedirs(DATA_DIR, exist_ok=True)
 
+# Function to check and install required packages
+def check_and_install_requirements():
+    print("Checking required packages...")
+    requirements_file = os.path.join(ROOT_DIR, 'requirements.txt')
+    
+    required_packages = [
+        'flask', 'flask_cors', 'flask_socketio', 'faker'
+    ]
+    
+    missing_packages = []
+    for package in required_packages:
+        try:
+            __import__(package)
+        except ImportError:
+            missing_packages.append(package)
+    
+    if missing_packages:
+        print(f"Missing packages: {', '.join(missing_packages)}")
+        print("Installing required packages...")
+        try:
+            subprocess.check_call([sys.executable, "-m", "pip", "install", "-r", requirements_file])
+            print("All required packages installed successfully!")
+        except subprocess.CalledProcessError:
+            print("Failed to install packages. Please run manually:")
+            print(f"pip install -r {requirements_file}")
+            sys.exit(1)
+    else:
+        print("All required packages are already installed.")
+
+# Function to run data generator if needed
+def run_data_generator_if_needed():
+    data_file = os.path.join(DATA_DIR, 'products.json')
+    
+    if not os.path.exists(data_file) or os.path.getsize(data_file) == 0:
+        print("No product data found. Generating sample data...")
+        data_generator_path = os.path.join(ROOT_DIR, 'data_generator.py')
+        
+        # Change to root directory to run data_generator.py
+        original_dir = os.getcwd()
+        os.chdir(ROOT_DIR)
+        
+        try:
+            subprocess.check_call([sys.executable, data_generator_path])
+            print("Sample data generated successfully!")
+        except subprocess.CalledProcessError:
+            print("Failed to generate sample data. Please run manually:")
+            print(f"python {data_generator_path}")
+        
+        # Change back to original directory
+        os.chdir(original_dir)
+
 app = Flask(__name__, static_folder=None)
 CORS(app)
 socketio = SocketIO(app, cors_allowed_origins="*")
@@ -31,15 +84,23 @@ def load_initial_data():
     global products
     try:
         data_file = os.path.join(DATA_DIR, 'products.json')
-        with open(data_file, 'r') as f:
-            products = json.load(f)
-        
-        # Generate initial activities from products
-        for product in products:
-            add_activity('create', product['id'], f"Added new product: {product['name']}", product['name'])
+        if os.path.exists(data_file) and os.path.getsize(data_file) > 0:
+            with open(data_file, 'r') as f:
+                products = json.load(f)
             
-    except FileNotFoundError:
+            print(f"Loaded {len(products)} products from data file.")
+            
+            # Generate initial activities from products
+            for product in products:
+                add_activity('create', product['id'], f"Added new product: {product['name']}", product['name'])
+            return True
+        else:
+            print("No product data file found or file is empty.")
+            return False
+    except Exception as e:
+        print(f"Error loading data: {str(e)}")
         products = []
+        return False
 
 # Add a new activity entry
 def add_activity(action, product_id, description, product_name):
@@ -91,9 +152,6 @@ def save_data():
     with open(data_file, 'w') as f:
         json.dump(products, f, indent=2)
 
-# Initialize data
-load_initial_data()
-
 # Serve frontend static files
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')
@@ -127,6 +185,7 @@ def handle_leave(room):
     leave_room(room)
     print(f'Client left room: {room}')
 
+# API routes
 @app.route('/api/products', methods=['GET'])
 def get_products():
     return jsonify({
@@ -264,7 +323,7 @@ def delete_product(product_id):
     save_data()
     
     # Broadcast the deletion
-    broadcast_product_update(product_id, 'delete', {'id': product_id})
+    broadcast_product_update(product_id, 'delete', {'id': product_id, 'name': product['name']})
     
     return jsonify({
         'success': True,
@@ -411,6 +470,40 @@ def get_sales_trends():
             'message': str(e)
         }), 500
 
+# Initialize data
+def generate_initial_products():
+    if not products:
+        categories = ['Fruits', 'Vegetables', 'Dairy', 'Meat', 'Beverages', 'Snacks']
+        units = ['kg', 'pcs', 'litres', 'packets']
+        
+        for i in range(10):  # Generate 10 initial products
+            product = {
+                'id': str(uuid.uuid4()),
+                'name': f"Product {i+1}",
+                'category': choice(categories),
+                'sku': f"SKU{i+1:03d}",
+                'unit': choice(units),
+                'current_stock': randint(5, 100),
+                'min_stock_level': randint(10, 20),
+                'cost_price': round(uniform(10, 50), 2),
+                'selling_price': round(uniform(50, 100), 2),
+                'description': f"Description for Product {i+1}",
+                'created_at': datetime.now().isoformat()
+            }
+            product['status'] = 'low_stock' if product['current_stock'] <= product['min_stock_level'] else 'active'
+            products.append(product)
+        
+        save_data()
+
+def periodic_updates():
+    while True:
+        try:
+            generate_fake_update()
+            time.sleep(3)  # Update every 3 seconds
+        except Exception as e:
+            print(f"Error in periodic updates: {e}")
+            time.sleep(3)  # Wait before retrying
+
 def generate_fake_update():
     global products
     if not products:
@@ -452,48 +545,33 @@ def generate_fake_update():
             product['name']
         )
 
-def periodic_updates():
-    while True:
-        try:
-            generate_fake_update()
-            time.sleep(3)  # Update every 3 seconds
-        except Exception as e:
-            print(f"Error in periodic updates: {e}")
-            time.sleep(3)  # Wait before retrying
-
-def generate_initial_products():
-    if not products:
-        categories = ['Fruits', 'Vegetables', 'Dairy', 'Meat', 'Beverages', 'Snacks']
-        units = ['kg', 'pcs', 'litres', 'packets']
-        
-        for i in range(10):  # Generate 10 initial products
-            product = {
-                'id': str(uuid.uuid4()),
-                'name': f"Product {i+1}",
-                'category': choice(categories),
-                'sku': f"SKU{i+1:03d}",
-                'unit': choice(units),
-                'current_stock': randint(5, 100),
-                'min_stock_level': randint(10, 20),
-                'cost_price': round(uniform(10, 50), 2),
-                'selling_price': round(uniform(50, 100), 2),
-                'description': f"Description for Product {i+1}",
-                'created_at': datetime.now().isoformat()
-            }
-            product['status'] = 'low_stock' if product['current_stock'] <= product['min_stock_level'] else 'active'
-            products.append(product)
-        
-        save_data()
-
 if __name__ == '__main__':
-    # Generate initial data if none exists
-    generate_initial_products()
+    print("\n===============================================")
+    print(" Food Inventory Management System")
+    print("===============================================")
+    
+    # Check and install required packages
+    check_and_install_requirements()
+    
+    # Run data generator if needed
+    run_data_generator_if_needed()
+    
+    # Load the data
+    data_loaded = load_initial_data()
+    
+    # Generate initial data only if none was loaded
+    if not data_loaded or len(products) == 0:
+        print("Generating initial product data...")
+        generate_initial_products()
     
     # Start periodic updates in a background thread
     update_thread = threading.Thread(target=periodic_updates, daemon=True)
     update_thread.start()
     
-    print("Starting server. Access the application at http://localhost:5000")
+    print("\n===============================================")
+    print(" Starting server...")
+    print(" Access the application at http://localhost:5000")
+    print("===============================================\n")
     
     # Run the Flask app
     socketio.run(app, debug=True, port=5000) 
