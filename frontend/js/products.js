@@ -112,28 +112,36 @@ const loadProducts = async () => {
 
 // Helper function to generate mock products if everything else fails
 function generateMockProducts() {
-    const categories = ['fruits', 'vegetables', 'dairy', 'meat', 'beverages', 'snacks'];
-    const statuses = ['active', 'low_stock', 'inactive'];
-    const units = ['kg', 'g', 'l', 'ml', 'pcs'];
+    const categories = ['fruits', 'vegetables', 'dairy', 'meat', 'beverages', 'snacks', 'bakery', 'canned goods', 'frozen foods', 'spices'];
+    const statuses = ['active', 'low_stock', 'out_of_stock'];
+    const units = ['kg', 'g', 'l', 'ml', 'pcs', 'bottles', 'boxes', 'cans', 'packages'];
     
     const mockProducts = [];
     
-    for (let i = 0; i < 10; i++) {
+    for (let i = 0; i < 30; i++) {
         const category = categories[Math.floor(Math.random() * categories.length)];
         const status = statuses[Math.floor(Math.random() * statuses.length)];
         const unit = units[Math.floor(Math.random() * units.length)];
+        
+        const costPrice = parseFloat((Math.random() * 50).toFixed(2));
+        const sellingPrice = parseFloat((costPrice * (1 + Math.random() * 0.5)).toFixed(2));
+        const currentStock = Math.floor(Math.random() * 100);
+        
+        // Add sales count for hot selling tracking
+        const salesCount = Math.floor(Math.random() * 500);
         
         mockProducts.push({
             id: 'mock-' + (i + 1),
             name: `Sample ${category.charAt(0).toUpperCase() + category.slice(1)} ${i + 1}`,
             sku: `SKU-${Math.floor(1000 + Math.random() * 9000)}`,
             category: category,
-            current_stock: Math.floor(Math.random() * 100),
+            current_stock: currentStock,
             min_stock_level: 10,
             unit: unit,
-            cost_price: (Math.random() * 50).toFixed(2),
-            selling_price: (Math.random() * 100).toFixed(2),
+            cost_price: costPrice,
+            selling_price: sellingPrice,
             status: status,
+            sales_count: salesCount,
             created_at: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString()
         });
     }
@@ -157,7 +165,25 @@ const updateProductsUI = () => {
     productsList.style.display = 'grid';
     noProducts.style.display = 'none';
     
-    productsList.innerHTML = products.map(product => `
+    productsList.innerHTML = products.map(product => {
+        // Determine stock alert level based on the relationship between current stock and min stock level
+        let stockAlertHtml = '';
+        if (product.status === 'low_stock') {
+            // Calculate what percentage of min_stock_level the current stock is
+            const stockRatio = product.current_stock / product.min_stock_level;
+            
+            let alertClass = 'warning'; // Default yellow warning
+            
+            if (product.current_stock === 0) {
+                alertClass = 'critical'; // Red - out of stock
+            } else if (stockRatio <= 0.5) {
+                alertClass = 'alert'; // Orange - very low stock
+            }
+            
+            stockAlertHtml = `<span class="stock-alert ${alertClass}">Low Stock</span>`;
+        }
+        
+        return `
         <div class="product-card" data-id="${product.id}">
             <div class="product-header">
                 <h3>${product.name}</h3>
@@ -174,7 +200,7 @@ const updateProductsUI = () => {
                 </div>
                 <div class="detail-item">
                     <label>Stock:</label>
-                    <span>${product.current_stock} ${product.unit}</span>
+                    <span>${product.current_stock} ${product.unit} ${stockAlertHtml}</span>
                 </div>
                 <div class="detail-item">
                     <label>Price:</label>
@@ -193,7 +219,8 @@ const updateProductsUI = () => {
                 </button>
             </div>
         </div>
-    `).join('');
+    `;
+    }).join('');
 };
 
 // Setup WebSocket listeners
@@ -354,12 +381,48 @@ const deleteProduct = async (productId) => {
     try {
         showLoading(true);
         
+        // First get the product details before deleting it
+        const productDetails = products.find(p => p.id === productId);
+        console.log('Deleting product:', productDetails);
+        
+        // Create a user activity event for the deletion BEFORE actually deleting
+        // This ensures we have product data to use
+        try {
+            console.log('Creating deletion event for product:', productDetails?.name);
+            const eventData = {
+                action: 'delete',
+                resource_type: 'product',
+                resource_id: productId,
+                product_id: productId,
+                product_name: productDetails?.name || 'Unknown Product',
+                description: `Product "${productDetails?.name || 'Unknown'}" was deleted from the system`,
+                initiated_by: 'user',
+                timestamp: new Date().toISOString()
+            };
+            
+            const eventResponse = await eventAPI.createEvent(eventData);
+            console.log('Deletion event created successfully:', eventResponse);
+        } catch (eventError) {
+            console.error('Error creating delete event:', eventError);
+        }
+        
+        // Now actually delete the product
         const response = await productAPI.deleteProduct(productId);
         if (!response.success) {
             throw new Error(response.message || 'Failed to delete product');
         }
         
         showNotification('Product deleted successfully', 'success');
+        
+        // Emit a websocket event for the deletion
+        if (window.socket) {
+            window.socket.emit('product-delete', { 
+                id: productId, 
+                product: productDetails 
+            });
+        }
+        
+        // Reload the products list
         await loadProducts();
         
     } catch (error) {

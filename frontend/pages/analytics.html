@@ -26,6 +26,10 @@
                     <span class="material-icons">bar_chart</span>
                     <a href="analytics.html">Analytics</a>
                 </li>
+                <li class="nav-item" id="notifications-button">
+                    <span class="material-icons">notifications</span>
+                    <span class="notification-badge" id="nav-notification-badge">0</span>
+                </li>
             </ul>
         </nav>
     </header>
@@ -35,10 +39,10 @@
             <h1 class="page-title">Analytics Dashboard</h1>
             
             <div class="grid-container">
-                <div class="grid-item">
+                <div class="grid-item full-width">
                     <div class="card">
                         <div class="card-header">
-                            <h3>Inventory Trends</h3>
+                            <h3>Inventory Value Trends</h3>
                         </div>
                         <div class="card-content chart-container">
                             <canvas id="inventory-trends-chart"></canvas>
@@ -57,28 +61,17 @@
                     </div>
                 </div>
                 
-                <div class="grid-item full-width">
+                <div class="grid-item">
                     <div class="card">
                         <div class="card-header">
-                            <h3>Low Stock Alerts</h3>
+                            <h3>Hot Selling Products</h3>
                         </div>
                         <div class="card-content">
-                            <table class="data-table" id="low-stock-table">
-                                <thead>
-                                    <tr>
-                                        <th>Product Name</th>
-                                        <th>Category</th>
-                                        <th>Current Stock</th>
-                                        <th>Minimum Stock</th>
-                                        <th>Status</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="low-stock-table-body">
-                                    <tr>
-                                        <td colspan="5" class="text-center">Loading data...</td>
-                                    </tr>
-                                </tbody>
-                            </table>
+                            <ul class="hot-products-list" id="hot-products-list">
+                                <li class="hot-product-item">
+                                    <div class="loading-indicator">Loading product data...</div>
+                                </li>
+                            </ul>
                         </div>
                     </div>
                 </div>
@@ -86,22 +79,21 @@
         </section>
     </main>
 
-    <!-- Real-time updates panel -->
-    <div class="real-time-panel" id="real-time-panel">
-        <div class="real-time-header">
+    <!-- Stock Alert Notifications Panel -->
+    <div class="notification-panel" id="stock-notification-panel">
+        <div class="notification-header">
             <div class="header-title">
-                <span class="material-icons">notifications</span>
-                <span>Real-time Updates</span>
-                <span class="badge" id="unread-count">0</span>
+                <span class="material-icons">inventory</span>
+                <span>Inventory Alerts</span>
+                <span class="badge" id="stock-alert-count">0</span>
             </div>
             <div class="header-controls">
-                <span class="material-icons" id="clear-notifications">close</span>
-                <span class="material-icons" id="toggle-panel">expand_less</span>
+                <span class="material-icons" id="close-notifications">close</span>
             </div>
         </div>
-        <div class="real-time-content" id="notifications-content">
-            <ul class="notifications-list" id="notifications">
-                <li class="notification-item">No recent updates</li>
+        <div class="notification-content">
+            <ul class="notifications-list" id="stock-notifications">
+                <li class="notification-item">No inventory alerts</li>
             </ul>
         </div>
     </div>
@@ -110,6 +102,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="../js/utils.js"></script>
     <script src="../js/api.js"></script>
+    <script src="../js/websocket.js"></script>
     <script src="../js/analytics.js"></script>
 </body>
 </html>

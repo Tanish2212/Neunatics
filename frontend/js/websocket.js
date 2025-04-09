@@ -75,6 +75,34 @@ const initWebSocket = () => {
   socket.on('resource-event', (data) => {
     dispatchEvent('resource-event', data);
   });
+  
+  // Handle custom product events
+  socket.on('product-create', (data) => {
+    console.log('WebSocket: Received product-create event', data);
+    dispatchEvent('product-update', {
+      type: 'create',
+      data: data.data || data
+    });
+    dispatchEvent('new-event', {
+      type: 'create',
+      resourceType: 'product',
+      data: data.data || data
+    });
+  });
+  
+  socket.on('product-delete', (data) => {
+    console.log('WebSocket: Received product-delete event', data);
+    dispatchEvent('product-update', {
+      type: 'delete',
+      id: data.id,
+      data: data.product || data
+    });
+    dispatchEvent('new-event', {
+      type: 'delete',
+      resourceType: 'product',
+      data: data.product || data
+    });
+  });
 };
 
 // Reconnect to the WebSocket server
@@ -159,12 +187,28 @@ const updateNotificationUI = () => {
     if (notifications.length === 0) {
       notificationsEl.innerHTML = '<li class="notification-item">No recent updates</li>';
     } else {
-      notificationsEl.innerHTML = notifications.map(notif => `
-        <li class="notification-item ${notif.read ? '' : 'unread'}">
-          <span class="notification-time">${formatTime(notif.time)}</span>
-          <p>${notif.message}</p>
-        </li>
-      `).join('');
+      notificationsEl.innerHTML = notifications.map(notif => {
+        const actionType = notif.action || 'update';
+        let notifClass = notif.read ? '' : 'unread';
+        
+        // Add class based on action type
+        if (actionType === 'create' || actionType === 'insert') {
+          notifClass += ' create';
+        } else if (actionType === 'delete') {
+          notifClass += ' delete';
+        } else if (actionType === 'stock_increase') {
+          notifClass += ' stock-increase';
+        } else if (actionType === 'stock_decrease') {
+          notifClass += ' stock-decrease';
+        }
+        
+        return `
+          <li class="notification-item ${notifClass}">
+            <span class="notification-time">${formatTime(notif.time)}</span>
+            <p>${notif.message}</p>
+          </li>
+        `;
+      }).join('');
     }
   }
   
@@ -218,13 +262,34 @@ document.addEventListener('DOMContentLoaded', () => {
   // Listen for product updates
   subscribeToEvent('product-update', (data) => {
     let message = '';
+    let eventType = data.type || 'update';
     
-    switch (data.type) {
+    switch (eventType) {
       case 'insert':
+      case 'create':
         message = `New product added: ${data.data.name}`;
         break;
       case 'update':
-        message = `Product updated: ${data.data.name}`;
+        // Check if stock was updated
+        if (data.data && data.data.previous) {
+          const oldStock = parseFloat(data.data.previous.current_stock) || 0;
+          const newStock = parseFloat(data.data.current_stock) || 0;
+          
+          if (oldStock !== newStock) {
+            const diff = newStock - oldStock;
+            if (diff > 0) {
+              message = `Stock increased for ${data.data.name}: from ${oldStock} to ${newStock} (+${diff})`;
+              eventType = 'stock_increase';
+            } else {
+              message = `Stock decreased for ${data.data.name}: from ${oldStock} to ${newStock} (${diff})`;
+              eventType = 'stock_decrease';
+            }
+          } else {
+            message = `Product updated: ${data.data.name}`;
+          }
+        } else {
+          message = `Product updated: ${data.data.name}`;
+        }
         break;
       case 'delete':
         message = `Product deleted: ID ${data.id}`;
@@ -233,6 +298,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     addNotification({
       type: 'product',
+      action: eventType,
       message,
       time: new Date(),
       read: false,

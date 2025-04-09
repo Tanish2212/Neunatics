@@ -170,17 +170,36 @@ async function loadLowStockAlerts() {
         }
         
         // Update alerts list
-        alertsList.innerHTML = response.data.map(alert => `
-            <li class="event-item">
-                <div class="event-header">
-                    <span class="event-title">${alert.product_name}</span>
-                    <span class="status-chip status-low_stock">Low Stock</span>
-                </div>
-                <p>Current stock: ${alert.current_stock} ${alert.unit}</p>
-                <p>Min. required: ${alert.min_stock_level} ${alert.unit}</p>
-                <div class="event-time">${formatTimeAgo(alert.last_updated)}</div>
-            </li>
-        `).join('');
+        alertsList.innerHTML = response.data.map(alert => {
+            // Calculate how critical the stock level is
+            const currentStock = parseFloat(alert.current_stock);
+            const minStock = parseFloat(alert.min_stock_level);
+            const ratio = currentStock / minStock;
+            
+            let severityClass = 'warning'; // default yellow
+            
+            if (ratio <= 0.5) {
+                severityClass = 'critical'; // red - very low stock
+            } else if (ratio <= 0.75) {
+                severityClass = 'alert'; // orange - somewhat low
+            }
+            
+            const stockDiff = minStock - currentStock;
+            
+            return `
+                <li class="event-item stock-alert ${severityClass}">
+                    <div class="event-header">
+                        <span class="event-title">${alert.product_name}</span>
+                        <span class="status-chip status-low_stock">Low Stock</span>
+                    </div>
+                    <p>Current stock: <strong>${alert.current_stock}</strong> ${alert.unit}</p>
+                    <p>Min. required: ${alert.min_stock_level} ${alert.unit} 
+                       <span class="stock-warning">Need ${stockDiff} more ${alert.unit}</span>
+                    </p>
+                    <div class="event-time">${formatTimeAgo(alert.last_updated)}</div>
+                </li>
+            `;
+        }).join('');
     } catch (error) {
         console.error('Error loading low stock alerts:', error);
         // Load mock alerts data
@@ -229,16 +248,50 @@ function updateActivityList(container, activities) {
         return;
     }
     
-    container.innerHTML = activities.map(activity => `
-        <li class="event-item">
-            <div class="event-header">
-                <span class="event-title">${activity.product_name || 'Unknown Product'}</span>
-                <span class="event-type ${activity.action}">${formatEventType(activity.action)}</span>
-            </div>
-            <p>${activity.description}</p>
-            <div class="event-time">${formatTimeAgo(activity.timestamp)}</div>
-        </li>
-    `).join('');
+    container.innerHTML = activities.map(activity => {
+        // Determine if stock changed and by how much
+        let stockChangeClass = '';
+        let stockChangeInfo = '';
+        
+        if (activity.description && activity.description.includes('Stock updated')) {
+            // Try to extract stock numbers from the description
+            const stockMatch = activity.description.match(/from (\d+\.?\d*) to (\d+\.?\d*)/);
+            if (stockMatch && stockMatch.length >= 3) {
+                const oldValue = parseFloat(stockMatch[1]);
+                const newValue = parseFloat(stockMatch[2]);
+                const difference = newValue - oldValue;
+                
+                if (difference > 0) {
+                    stockChangeClass = 'stock-increase';
+                    stockChangeInfo = `<span class="stock-change increase">+${difference}</span>`;
+                } else if (difference < 0) {
+                    stockChangeClass = 'stock-decrease';
+                    stockChangeInfo = `<span class="stock-change decrease">${difference}</span>`;
+                }
+            }
+        }
+        
+        // Set appropriate class based on action type
+        let eventClassType = activity.action || 'update';
+        if (eventClassType === 'create') {
+            eventClassType = 'create';
+        } else if (eventClassType === 'delete') {
+            eventClassType = 'delete';
+        } else if (stockChangeClass) {
+            eventClassType = stockChangeClass;
+        }
+        
+        return `
+            <li class="event-item ${eventClassType}">
+                <div class="event-header">
+                    <span class="event-title">${activity.product_name || 'Unknown Product'}</span>
+                    <span class="event-type ${activity.action || 'update'}">${formatEventType(activity.action || 'update')}</span>
+                </div>
+                <p>${activity.description} ${stockChangeInfo}</p>
+                <div class="event-time">${formatTimeAgo(activity.timestamp)}</div>
+            </li>
+        `;
+    }).join('');
     
     // Update last updated time
     updateLastUpdatedTime();
@@ -313,15 +366,47 @@ function handleActivityUpdate(data) {
     
     if (!activityList) return;
     
+    // Determine if stock changed and by how much
+    let stockChangeClass = '';
+    let stockChangeInfo = '';
+    
+    if (data.description && data.description.includes('Stock updated')) {
+        // Try to extract stock numbers from the description
+        const stockMatch = data.description.match(/from (\d+\.?\d*) to (\d+\.?\d*)/);
+        if (stockMatch && stockMatch.length >= 3) {
+            const oldValue = parseFloat(stockMatch[1]);
+            const newValue = parseFloat(stockMatch[2]);
+            const difference = newValue - oldValue;
+            
+            if (difference > 0) {
+                stockChangeClass = 'stock-increase';
+                stockChangeInfo = `<span class="stock-change increase">+${difference}</span>`;
+            } else if (difference < 0) {
+                stockChangeClass = 'stock-decrease';
+                stockChangeInfo = `<span class="stock-change decrease">${difference}</span>`;
+            }
+        }
+    }
+    
+    // Set appropriate class based on action type
+    let eventClassType = data.action || 'update';
+    if (eventClassType === 'create') {
+        eventClassType = 'create';
+    } else if (eventClassType === 'delete') {
+        eventClassType = 'delete';
+    } else if (stockChangeClass) {
+        eventClassType = stockChangeClass;
+    }
+    
     // Create new activity element
     const newActivityItem = document.createElement('li');
-    newActivityItem.className = 'event-item';
+    newActivityItem.className = `event-item ${eventClassType}`;
     newActivityItem.innerHTML = `
         <div class="event-header">
-            <span class="event-title">${data.product_name}</span>
-            <span class="event-type ${data.action}">${formatEventType(data.action)}</span>
+            <span class="event-title">${data.product_name || 'Unknown Product'}</span>
+            <span class="event-type ${data.action || 'update'}">${formatEventType(data.action || 'update')}</span>
         </div>
-        <p>${data.description}</p>
+        <p>${data.description} ${stockChangeInfo}</p>
         <div class="event-time">${formatTimeAgo(data.timestamp)}</div>
     `;
     
@@ -344,8 +429,19 @@ function handleActivityUpdate(data) {
     // Update last updated time
     updateLastUpdatedTime();
     
-    // Show notification
-    showNotification(`New activity: ${data.product_name} ${data.action}`, 'info');
+    // Show notification based on activity type
+    let notificationType = 'info';
+    if (data.action === 'create') {
+        notificationType = 'success';
+    } else if (data.action === 'delete') {
+        notificationType = 'error';
+    } else if (stockChangeClass === 'stock-increase') {
+        notificationType = 'success';
+    } else if (stockChangeClass === 'stock-decrease') {
+        notificationType = 'warning';
+    }
+    
+    showNotification(`${data.product_name || 'Product'}: ${data.description}`, notificationType);
 }
 
 // Handle summary update
@@ -623,13 +719,19 @@ function formatTime(date) {
 
 // Format event type
 function formatEventType(type) {
-    switch (type) {
+    if (!type) return 'Updated';
+    
+    switch (type.toLowerCase()) {
         case 'create':
             return 'Added';
         case 'update':
             return 'Updated';
         case 'delete':
             return 'Deleted';
+        case 'stock_increase':
+            return 'Stock Added';
+        case 'stock_decrease':
+            return 'Stock Removed';
         default:
             return type.charAt(0).toUpperCase() + type.slice(1);
     }

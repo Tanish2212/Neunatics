@@ -1098,6 +1098,105 @@
     font-weight: 500;
   }
   
+  /* Stock Change Indicators */
+  .stock-change {
+    display: inline-block;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: bold;
+    margin-left: 8px;
+  }
+  
+  .stock-change.increase {
+    background-color: rgba(76, 175, 80, 0.15);
+    color: #1e7e34;
+  }
+  
+  .stock-change.decrease {
+    background-color: rgba(244, 67, 54, 0.15);
+    color: #dc3545;
+  }
+  
+  .event-item.stock-increase {
+    border-left: 3px solid #1e7e34;
+  }
+  
+  .event-item.stock-decrease {
+    border-left: 3px solid #dc3545;
+  }
+  
+  /* Low Stock Alerts */
+  .stock-alert {
+    border-left: 3px solid #ffc107; /* Default yellow */
+  }
+  
+  .stock-alert.warning {
+    border-left: 3px solid #ffc107; /* Yellow */
+    background-color: rgba(255, 193, 7, 0.05);
+  }
+  
+  .stock-alert.alert {
+    border-left: 3px solid #fd7e14; /* Orange */
+    background-color: rgba(253, 126, 20, 0.05);
+  }
+  
+  .stock-alert.critical {
+    border-left: 3px solid #dc3545; /* Red */
+    background-color: rgba(220, 53, 69, 0.05);
+  }
+  
+  .stock-warning {
+    font-size: 0.8rem;
+    background-color: rgba(255, 193, 7, 0.1);
+    color: #856404;
+    border-radius: 4px;
+    padding: 2px 6px;
+    margin-left: 8px;
+    display: inline-block;
+  }
+
+  .product-status.status-low_stock {
+    background-color: rgba(255, 193, 7, 0.15);
+    color: #856404;
+    border: 1px solid rgba(255, 193, 7, 0.5);
+  }
+
+  .product-stock-warning {
+    color: #856404;
+    background-color: rgba(255, 193, 7, 0.1);
+    padding: 4px 8px;
+    border-radius: 4px;
+    display: inline-block;
+    margin-left: 8px;
+    font-size: 0.8rem;
+  }
+  
+  /* Event type styling for activity stream */
+  .event-item.create {
+    border-left: 3px solid #1e7e34;
+    background-color: rgba(76, 175, 80, 0.05);
+  }
+  
+  .event-item.delete {
+    border-left: 3px solid #dc3545;
+    background-color: rgba(244, 67, 54, 0.05);
+  }
+  
+  .event-type.create {
+    background-color: rgba(76, 175, 80, 0.15);
+    color: #1e7e34;
+  }
+  
+  .event-type.delete {
+    background-color: rgba(244, 67, 54, 0.15);
+    color: #dc3545;
+  }
+  
+  .event-type.update {
+    background-color: rgba(33, 150, 243, 0.15);
+    color: #0d6efd;
+  }
+  
   /* New real-time update animation */
   @keyframes newActivityAnimation {
     from { 
@@ -1136,5 +1235,352 @@
     .summary-grid {
       grid-template-columns: 1fr;
     }
+  }
+  
+  /* Notification styling */
+  .notification-item.unread {
+    background-color: rgba(33, 150, 243, 0.05);
+    font-weight: 500;
+  }
+
+  .notification-item.create {
+    border-left: 3px solid #1e7e34;
+  }
+  
+  .notification-item.delete {
+    border-left: 3px solid #dc3545;
+  }
+  
+  .notification-item.stock-increase {
+    border-left: 3px solid #1e7e34;
+  }
+  
+  .notification-item.stock-decrease {
+    border-left: 3px solid #fd7e14;
+  }
+
+  /* Notification Badge and Panel */
+  .notification-badge {
+    position: absolute;
+    top: 10px;
+    right: 6px;
+    background-color: var(--error-color);
+    color: white;
+    border-radius: 50%;
+    width: 18px;
+    height: 18px;
+    font-size: 11px;
+    font-weight: 500;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  }
+
+  .notification-badge.visible {
+    display: flex;
+  }
+
+  #notifications-button {
+    position: relative;
+    cursor: pointer;
+  }
+
+  .notification-panel {
+    position: fixed;
+    top: 64px;
+    right: 0;
+    width: 320px;
+    background-color: var(--card-background);
+    border-radius: 0 0 0 8px;
+    box-shadow: var(--shadow);
+    z-index: 999;
+    display: none;
+    overflow: hidden;
+    border: 1px solid var(--border-color);
+    border-top: none;
+    max-height: calc(100vh - 70px);
+  }
+
+  .notification-panel.visible {
+    display: block;
+  }
+
+  .notification-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    background-color: var(--primary-color);
+    color: white;
+  }
+
+  .notification-header .header-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 500;
+  }
+
+  .notification-header .material-icons {
+    cursor: pointer;
+  }
+
+  .notification-content {
+    max-height: 400px;
+    overflow-y: auto;
+  }
+
+  .notifications-list {
+    padding: 0;
+    margin: 0;
+    list-style: none;
+  }
+
+  .notification-item {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  .notification-item:last-child {
+    border-bottom: none;
+  }
+
+  .notification-item.low-stock {
+    border-left: 3px solid var(--warning-color);
+    background-color: rgba(255, 193, 7, 0.05);
+  }
+
+  .notification-item.out-of-stock {
+    border-left: 3px solid var(--error-color);
+    background-color: rgba(244, 67, 54, 0.05);
+  }
+
+  .notification-item .notification-header {
+    background-color: transparent;
+    color: var(--text-primary);
+    padding: 0 0 8px 0;
+  }
+
+  .notification-time {
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+    margin-top: 8px;
+  }
+
+  /* Activity List Styling */
+  .activity-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .activity-item {
+    padding: 16px;
+    border-bottom: 1px solid var(--border-color);
+    position: relative;
+  }
+
+  .activity-item:last-child {
+    border-bottom: none;
+  }
+
+  .activity-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+
+  .activity-title {
+    font-weight: 500;
+    color: var(--text-primary);
+  }
+
+  .activity-type {
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 500;
+  }
+
+  .activity-type.create {
+    background-color: rgba(76, 175, 80, 0.15);
+    color: var(--success-color);
+  }
+
+  .activity-type.update {
+    background-color: rgba(33, 150, 243, 0.15);
+    color: var(--secondary-color);
+  }
+
+  .activity-type.delete {
+    background-color: rgba(244, 67, 54, 0.15);
+    color: var(--error-color);
+  }
+
+  .activity-description {
+    color: var(--text-primary);
+    margin: 0 0 8px 0;
+  }
+
+  .activity-time {
+    color: var(--text-secondary);
+    font-size: 12px;
+  }
+
+  .activity-item.create {
+    border-left: 3px solid var(--success-color);
+  }
+
+  .activity-item.delete {
+    border-left: 3px solid var(--error-color);
+  }
+
+  .activity-item.stock-increase {
+    border-left: 3px solid var(--success-color);
+  }
+
+  .activity-item.stock-decrease {
+    border-left: 3px solid var(--warning-color);
+  }
+
+  .activity-item .error-message {
+    color: var(--error-color);
+    text-align: center;
+    font-style: italic;
+  }
+
+  .activity-item .loading-indicator {
+    text-align: center;
+    color: var(--text-secondary);
+    padding: 20px 0;
+  }
+
+  /* Responsive Adjustments */
+  @media (max-width: 768px) {
+    .filters-bar {
+      flex-direction: column;
+      align-items: stretch;
+    }
+    
+    .search-box {
+      max-width: none;
+    }
+    
+    .filter-group {
+      flex-direction: column;
+    }
+    
+    .dashboard-grid {
+      grid-template-columns: 1fr;
+    }
+    
+    .summary-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  /* Hot Selling Products Styles */
+  .hot-products-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .hot-product-item {
+    display: flex;
+    align-items: center;
+    padding: 12px;
+    border-bottom: 1px solid var(--border-color);
+    transition: background-color 0.2s;
+  }
+
+  .hot-product-item:last-child {
+    border-bottom: none;
+  }
+
+  .hot-product-item:hover {
+    background-color: rgba(0, 0, 0, 0.02);
+  }
+
+  .hot-product-rank {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 30px;
+    height: 30px;
+    background-color: var(--primary-color);
+    color: white;
+    border-radius: 50%;
+    margin-right: 12px;
+    font-weight: 500;
+  }
+
+  .hot-product-info {
+    flex: 1;
+  }
+
+  .hot-product-name {
+    font-weight: 500;
+    margin-bottom: 4px;
+  }
+
+  .hot-product-category {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+  }
+
+  .hot-product-sales {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    margin-left: 12px;
+  }
+
+  .hot-product-count {
+    font-weight: 500;
+    color: var(--primary-color);
+  }
+
+  .hot-product-label {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+  }
+
+  .hot-product-item .loading-indicator {
+    width: 100%;
+    padding: 20px 0;
+    display: flex;
+    justify-content: center;
+    color: var(--text-secondary);
+  }
+
+  /* Product card stock alerts */
+  .detail-item .stock-alert {
+    margin-left: 8px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    display: inline-block;
+  }
+
+  .detail-item .stock-alert.warning {
+    background-color: rgba(255, 193, 7, 0.15);
+    color: #856404;
+    border: 1px solid rgba(255, 193, 7, 0.5);
+  }
+
+  .detail-item .stock-alert.alert {
+    background-color: rgba(253, 126, 20, 0.15);
+    color: #fd7e14;
+    border: 1px solid rgba(253, 126, 20, 0.5);
+  }
+
+  .detail-item .stock-alert.critical {
+    background-color: rgba(220, 53, 69, 0.15);
+    color: #dc3545;
+    border: 1px solid rgba(220, 53, 69, 0.5);
   }
 

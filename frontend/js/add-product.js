@@ -47,11 +47,63 @@ document.addEventListener('DOMContentLoaded', () => {
             if (isEditMode && productIdParam) {
                 response = await productAPI.updateProduct(productIdParam, productData);
                 if (response.success) {
+                    // Create update event
+                    try {
+                        console.log('Creating update event for product:', productData.name);
+                        const eventResponse = await eventAPI.createEvent({
+                            action: 'update',
+                            resource_type: 'product',
+                            resource_id: productIdParam,
+                            product_id: productIdParam,
+                            product_name: productData.name,
+                            description: `Product "${productData.name}" was updated`,
+                            initiated_by: 'user',
+                            timestamp: new Date().toISOString()
+                        });
+                        console.log('Update event created successfully:', eventResponse);
+                        
+                        // Emit socket event for update
+                        if (window.socket) {
+                            window.socket.emit('product-update', {
+                                type: 'update',
+                                data: response.data
+                            });
+                        }
+                    } catch (eventError) {
+                        console.error('Error creating update event:', eventError);
+                    }
+                    
                     showNotification('Product updated successfully!', 'success');
                 }
             } else {
                 response = await productAPI.createProduct(productData);
                 if (response.success) {
+                    // Create event for new product creation
+                    try {
+                        console.log('Creating event for new product:', productData.name);
+                        const eventResponse = await eventAPI.createEvent({
+                            action: 'create',
+                            resource_type: 'product',
+                            resource_id: response.data?.id,
+                            product_id: response.data?.id,
+                            product_name: productData.name,
+                            description: `New product "${productData.name}" was added`,
+                            initiated_by: 'user',
+                            timestamp: new Date().toISOString()
+                        });
+                        console.log('Creation event created successfully:', eventResponse);
+                        
+                        // Emit socket event for creation
+                        if (window.socket) {
+                            window.socket.emit('product-create', {
+                                type: 'create',
+                                data: response.data
+                            });
+                        }
+                    } catch (eventError) {
+                        console.error('Error creating product event:', eventError);
+                    }
+                    
                     showNotification('Product added successfully!', 'success');
                 }
             }
