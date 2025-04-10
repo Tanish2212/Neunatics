@@ -242,6 +242,13 @@
     color: var(--text-secondary);
   }
   
+  /* Make NO STOCK more visually prominent */
+  .status-out-of-stock {
+    background-color: var(--error-color);
+    color: white;
+    font-weight: bold;
+  }
+  
   /* Search Box */
   .search-box {
     position: relative;

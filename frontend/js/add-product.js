@@ -5,6 +5,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const productIdParam = new URLSearchParams(window.location.search).get('id');
     const isEditMode = new URLSearchParams(window.location.search).get('mode') === 'edit';
     
+    // Populate the category dropdown with all available categories
+    populateCategoryDropdown();
+    
     // If in edit mode, load existing product data
     if (isEditMode && productIdParam) {
         loadProductData(productIdParam);
@@ -228,5 +231,41 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Fallback notification
         alert(message);
+    }
+
+    // Function to populate category dropdown with all available categories from products
+    async function populateCategoryDropdown() {
+        const categorySelect = document.getElementById('product-category');
+        if (!categorySelect) return;
+        
+        // Keep the first "Select Category" option
+        const defaultOption = categorySelect.options[0];
+        
+        try {
+            // Get all available categories from products
+            const response = await productAPI.getAllProducts();
+            
+            if (response.success && Array.isArray(response.data)) {
+                // Extract unique categories
+                const categories = [...new Set(response.data.map(p => p.category).filter(Boolean))];
+                
+                // Sort categories alphabetically
+                categories.sort();
+                
+                // Clear existing options except the first one
+                categorySelect.innerHTML = '';
+                categorySelect.appendChild(defaultOption);
+                
+                // Add category options
+                categories.forEach(category => {
+                    const option = document.createElement('option');
+                    option.value = category;
+                    option.textContent = category.charAt(0).toUpperCase() + category.slice(1);
+                    categorySelect.appendChild(option);
+                });
+            }
+        } catch (error) {
+            console.error('Error fetching categories for dropdown:', error);
+        }
     }
 }); 
