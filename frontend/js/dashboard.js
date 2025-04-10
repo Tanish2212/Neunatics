@@ -1,6 +1,5 @@
 // Global variables
 let activityUpdateInterval;
-let chartUpdateInterval;
 let unreadLowStockCount = 0;
 let lowStockItems = [];
 
@@ -14,7 +13,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     // Set up periodic updates (fallback)
     activityUpdateInterval = setInterval(loadRecentActivity, 30000); // Every 30 seconds
-    chartUpdateInterval = setInterval(updateSalesChart, 60000); // Every minute
     
     // Update last updated time
     updateLastUpdatedTime();
@@ -28,7 +26,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Cleanup on page unload
     window.addEventListener('beforeunload', () => {
         clearInterval(activityUpdateInterval);
-        clearInterval(chartUpdateInterval);
     });
 });
 
@@ -38,8 +35,7 @@ async function loadDashboardData() {
         await Promise.all([
             loadSummaryData(),
             loadRecentActivity(),
-            loadLowStockAlerts(),
-            loadSalesTrends('week')
+            loadLowStockAlerts()
         ]);
     } catch (error) {
         console.error('Error loading dashboard data:', error);
@@ -270,38 +266,6 @@ async function loadLowStockAlerts() {
         console.error('Error loading low stock alerts:', error);
         // Load mock alerts data
         loadMockAlertsData();
-    }
-}
-
-// Load sales trends chart
-async function loadSalesTrends(period = 'week') {
-    try {
-        // Fetch trends data
-        const response = await dashboardAPI.getSalesTrends();
-        
-        if (!response.success) {
-            throw new Error('Failed to load sales trends');
-        }
-        
-        // Get data for selected period
-        if (!response.data || !response.data[period]) {
-            throw new Error(`No data available for period: ${period}`);
-        }
-        
-        const periodData = response.data[period];
-        
-        // Create/update chart
-        updateSalesChart(periodData);
-        
-        // Highlight active period button
-        const buttons = document.querySelectorAll('.chart-controls .btn');
-        buttons.forEach(btn => {
-            btn.classList.toggle('active', btn.dataset.period === period);
-        });
-    } catch (error) {
-        console.error('Error loading sales trends:', error);
-        // Load mock chart data
-        loadMockChartData(period);
     }
 }
 
@@ -559,87 +523,22 @@ function updateLastUpdatedTime() {
 
 // Setup event listeners
 function setupEventListeners() {
-    // View all activity button
-    const viewAllActivityBtn = document.getElementById('view-all-activity');
-    if (viewAllActivityBtn) {
-        viewAllActivityBtn.addEventListener('click', () => {
-            window.location.href = 'pages/activity.html';
+    const viewAllActivity = document.getElementById('view-all-activity');
+    if (viewAllActivity) {
+        viewAllActivity.addEventListener('click', () => {
+            // Implement view all activity functionality
+            // This could be a modal or redirect to a full activity page
+            showNotification('View all activity coming soon', 'info');
         });
     }
     
-    // View all alerts button
-    const viewAllAlertsBtn = document.getElementById('view-all-alerts');
-    if (viewAllAlertsBtn) {
-        viewAllAlertsBtn.addEventListener('click', () => {
-            window.location.href = 'pages/products.html?filter=low_stock';
+    const viewAllAlerts = document.getElementById('view-all-alerts');
+    if (viewAllAlerts) {
+        viewAllAlerts.addEventListener('click', () => {
+            // Implement view all alerts functionality
+            showNotification('View all alerts coming soon', 'info');
         });
     }
-    
-    // Chart period buttons
-    const chartButtons = document.querySelectorAll('.chart-controls .btn');
-    chartButtons.forEach(btn => {
-        btn.addEventListener('click', () => {
-            const period = btn.dataset.period;
-            loadSalesTrends(period);
-        });
-    });
-}
-
-// Update sales chart
-function updateSalesChart(data) {
-    const ctx = document.getElementById('sales-chart');
-    
-    if (!ctx) return;
-    
-    // If no data provided, use mock data
-    if (!data) {
-        data = generateMockChartData();
-    }
-    
-    // If chart already exists, destroy it
-    if (window.salesChart) {
-        window.salesChart.destroy();
-    }
-    
-    // Create new chart
-    window.salesChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: data.labels,
-            datasets: [{
-                label: 'Sales',
-                data: data.values,
-                backgroundColor: 'rgba(46, 125, 50, 0.2)',
-                borderColor: 'rgba(46, 125, 50, 1)',
-                borderWidth: 2,
-                tension: 0.4,
-                pointBackgroundColor: 'rgba(46, 125, 50, 1)'
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    ticks: {
-                        callback: function(value) {
-                            return '$' + value;
-                        }
-                    }
-                }
-            },
-            plugins: {
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            return '$' + context.parsed.y;
-                        }
-                    }
-                }
-            }
-        }
-    });
 }
 
 // Load mock activity data
@@ -752,34 +651,6 @@ function loadMockAlertsData() {
     }
     lowStockItems = mockAlerts;
     updateNotificationBadge();
-}
-
-// Load mock chart data
-function loadMockChartData(period) {
-    updateSalesChart(generateMockChartData(period));
-}
-
-// Generate mock chart data
-function generateMockChartData(period = 'week') {
-    let labels = [];
-    let values = [];
-    
-    switch (period) {
-        case 'week':
-            labels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-            values = [1200, 1900, 1500, 1800, 2200, 2800, 2400];
-            break;
-        case 'month':
-            labels = ['Week 1', 'Week 2', 'Week 3', 'Week 4'];
-            values = [7800, 9200, 10500, 11800];
-            break;
-        case 'year':
-            labels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-            values = [32000, 29000, 35000, 38000, 36000, 40000, 42000, 45000, 43000, 47000, 50000, 55000];
-            break;
-    }
-    
-    return { labels, values };
 }
 
 // Format currency
