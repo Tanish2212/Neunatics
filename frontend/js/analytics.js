@@ -478,7 +478,20 @@ const formatStatus = (status) => {
 
 // Format time ago
 const formatTimeAgo = (timestamp) => {
+  // Check if timestamp is valid
+  if (!timestamp || timestamp === 'undefined' || timestamp === 'null') {
+    const now = new Date();
+    return now.toLocaleDateString() + ' ' + now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+  }
+  
   const date = new Date(timestamp);
+  
+  // Check if date is invalid
+  if (isNaN(date.getTime())) {
+    const now = new Date();
+    return now.toLocaleDateString() + ' ' + now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+  }
+  
   const now = new Date();
   const diffMs = now - date;
   const diffSec = Math.round(diffMs / 1000);
@@ -495,7 +508,7 @@ const formatTimeAgo = (timestamp) => {
   } else if (diffDay < 7) {
     return `${diffDay} day${diffDay > 1 ? 's' : ''} ago`;
   } else {
-    const options = { year: 'numeric', month: 'short', day: 'numeric' };
+    const options = { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' };
     return date.toLocaleDateString(undefined, options);
   }
 };
