@@ -1,8 +1,6 @@
 // Global variables
 let activityUpdateInterval;
 let chartUpdateInterval;
-let unreadLowStockCount = 0;
-let lowStockItems = [];
 
 // Initialize dashboard
 document.addEventListener('DOMContentLoaded', async () => {
@@ -21,9 +19,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     // Set up event listeners
     setupEventListeners();
-
-    // Setup notification button
-    setupNotificationButton();
     
     // Cleanup on page unload
     window.addEventListener('beforeunload', () => {
@@ -156,7 +151,6 @@ async function loadRecentActivity() {
 async function loadLowStockAlerts() {
     try {
         const alertsList = document.getElementById('low-stock-alerts');
-        const stockNotifications = document.getElementById('stock-notifications');
         
         if (!alertsList) return;
         
@@ -172,10 +166,6 @@ async function loadLowStockAlerts() {
         
         if (response.data.length === 0) {
             alertsList.innerHTML = '<li class="event-item"><p>No low stock items found.</p></li>';
-            if (stockNotifications) {
-                stockNotifications.innerHTML = '<li class="notification-item">No inventory alerts</li>';
-            }
-            lowStockItems = [];
             return;
         }
         
@@ -196,21 +186,11 @@ async function loadLowStockAlerts() {
             
             const stockDiff = minStock - currentStock;
             
-            // Determine status text and class based on stock level
-            let statusText = 'Low Stock';
-            let statusClass = 'status-low_stock';
-            
-            // If stock is zero, change to NO STOCK
-            if (currentStock === 0) {
-                statusText = 'NO STOCK';
-                statusClass = 'status-out-of-stock';
-            }
-            
             return `
                 <li class="event-item stock-alert ${severityClass}">
                     <div class="event-header">
                         <span class="event-title">${alert.product_name}</span>
-                        <span class="status-chip ${statusClass}">${statusText}</span>
+                        <span class="status-chip status-low_stock">Low Stock</span>
                     </div>
                     <p>Current stock: <strong>${alert.current_stock}</strong> ${alert.unit}</p>
                     <p>Min. required: ${alert.min_stock_level} ${alert.unit} 
@@ -220,82 +200,10 @@ async function loadLowStockAlerts() {
                 </li>
             `;
         }).join('');
-        
-        // Update notification panel to match analytics.js styling
-        if (stockNotifications) {
-            if (response.data.length === 0) {
-                stockNotifications.innerHTML = '<li class="notification-item">No inventory alerts</li>';
-            } else {
-                stockNotifications.innerHTML = response.data.map(alert => {
-                    // Calculate how critical the stock level is
-                    const currentStock = parseFloat(alert.current_stock);
-                    const minStock = parseFloat(alert.min_stock_level);
-                    const ratio = currentStock / minStock;
-                    
-                    let severityClass = 'stock-alert warning'; // default yellow warning
-                    
-                    if (ratio <= 0 || currentStock === 0) {
-                        severityClass = 'stock-alert critical'; // red - out of stock
-                    } else if (ratio < 0.5) {
-                        severityClass = 'stock-alert alert'; // orange - very low stock
-                    }
-                    
-                    // Determine status badge text and class
-                    let statusText = formatStatus(alert.status || 'low_stock');
-                    let statusClass = `status-${alert.status || 'low_stock'}`;
-                    
-                    // Override status for zero stock
-                    if (currentStock === 0) {
-                        statusText = 'NO STOCK';
-                        statusClass = 'status-out-of-stock';
-                    }
-                    
-                    return `
-                        <li class="notification-item">
-                            <div class="notification-header">
-                                <strong>${alert.product_name}</strong>
-                                <span class="status-chip ${statusClass}">${statusText}</span>
-                            </div>
-                            <div class="${severityClass}">
-                                <p>Current stock: <b>${alert.current_stock}</b> ${alert.unit}</p>
-                                <p>Minimum stock: ${alert.min_stock_level} ${alert.unit}</p>
-                            </div>
-                            <p class="notification-time">${formatTimeAgo(alert.last_updated)}</p>
-                        </li>
-                    `;
-                }).join('');
-            }
-        }
-        
-        // Update global variable for notifications
-        if (lowStockItems.length < response.data.length) {
-            unreadLowStockCount += (response.data.length - lowStockItems.length);
-        }
-        lowStockItems = response.data;
-        updateNotificationBadge();
-        
     } catch (error) {
         console.error('Error loading low stock alerts:', error);
         // Load mock alerts data
         loadMockAlertsData();
-    }
-}
-
-// Helper function to format status text
-function formatStatus(status) {
-    if (!status) return 'Unknown';
-    
-    switch (status.toLowerCase()) {
-        case 'active':
-            return 'Active';
-        case 'low_stock':
-            return 'Low Stock';
-        case 'out_of_stock':
-            return 'Out of Stock';
-        case 'discontinued':
-            return 'Discontinued';
-        default:
-            return status.charAt(0).toUpperCase() + status.slice(1);
     }
 }
 
@@ -826,58 +734,5 @@ function formatEventType(type) {
             return 'Stock Removed';
         default:
             return type.charAt(0).toUpperCase() + type.slice(1);
-    }
-}
-
-// Setup notification button
-function setupNotificationButton() {
-    const notificationButton = document.getElementById('notifications-button');
-    const notificationPanel = document.getElementById('stock-notification-panel');
-    const closeNotifications = document.getElementById('close-notifications');
-    
-    if (notificationButton && notificationPanel && closeNotifications) {
-        // Toggle notification panel
-        notificationButton.addEventListener('click', () => {
-            notificationPanel.classList.toggle('visible');
-            
-            // Mark notifications as read when panel is opened
-            if (notificationPanel.classList.contains('visible')) {
-                unreadLowStockCount = 0;
-                updateNotificationBadge();
-            }
-        });
-        
-        // Close notification panel
-        closeNotifications.addEventListener('click', () => {
-            notificationPanel.classList.remove('visible');
-        });
-        
-        // Close panel if clicked outside
-        document.addEventListener('click', (event) => {
-            if (!notificationPanel.contains(event.target) && 
-                !notificationButton.contains(event.target) && 
-                notificationPanel.classList.contains('visible')) {
-                notificationPanel.classList.remove('visible');
-            }
-        });
-    }
-}
-
-// Update notification badge
-function updateNotificationBadge() {
-    const badge = document.getElementById('nav-notification-badge');
-    const stockAlertCount = document.getElementById('stock-alert-count');
-    
-    if (badge) {
-        if (unreadLowStockCount > 0) {
-            badge.textContent = unreadLowStockCount;
-            badge.classList.add('visible');
-        } else {
-            badge.classList.remove('visible');
-        }
-    }
-    
-    if (stockAlertCount) {
-        stockAlertCount.textContent = lowStockItems.length;
     }
 }

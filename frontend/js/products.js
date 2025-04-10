@@ -92,16 +92,25 @@ const loadProducts = async () => {
             );
         }
         
-        if (categoryFilter) {
+        // Apply both category and status filters together
+        if (categoryFilter && statusFilter) {
             filteredProducts = filteredProducts.filter(product => 
-                product.category?.toLowerCase() === categoryFilter.toLowerCase()
-            );
-        }
-        
-        if (statusFilter) {
-            filteredProducts = filteredProducts.filter(product => 
+                product.category?.toLowerCase() === categoryFilter.toLowerCase() &&
                 product.status === statusFilter
             );
+        } else {
+            // Apply individual filters if only one is set
+            if (categoryFilter) {
+                filteredProducts = filteredProducts.filter(product => 
+                    product.category?.toLowerCase() === categoryFilter.toLowerCase()
+                );
+            }
+            
+            if (statusFilter) {
+                filteredProducts = filteredProducts.filter(product => 
+                    product.status === statusFilter
+                );
+            }
         }
         
         products = filteredProducts;
@@ -289,6 +298,8 @@ const setupEventListeners = () => {
         
         categoryFilterSelect.addEventListener('change', (e) => {
             categoryFilter = e.target.value;
+            // Show loading state before applying filter
+            showLoading(true);
             loadProducts();
         });
     }
@@ -298,6 +309,8 @@ const setupEventListeners = () => {
     if (statusFilterSelect) {
         statusFilterSelect.addEventListener('change', (e) => {
             statusFilter = e.target.value;
+            // Show loading state before applying filter
+            showLoading(true);
             loadProducts();
         });
     }

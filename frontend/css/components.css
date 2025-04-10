@@ -233,9 +233,8 @@
   }
   
   .status-out_of_stock {
-    background-color: rgba(244, 67, 54, 0.15);
-    color: #f44336;
-    font-weight: 600;
+    background-color: rgba(244, 67, 54, 0.1);
+    color: var(--error-color);
   }
   
   .status-discontinued {
@@ -251,12 +250,11 @@
   
   .search-box input {
     width: 100%;
-    padding: 8px 16px 8px 40px;
-    border: 1px solid #ddd;
-    border-radius: 20px;
-    font-size: 14px;
-    z-index: 1;
-    position: relative;
+    padding: var(--spacing-md);
+    padding-right: 40px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    font-size: 1rem;
   }
   
   .search-box .material-icons {
@@ -855,7 +853,7 @@
     width: 100%;
     padding: 8px 16px 8px 40px;
     border: 1px solid #ddd;
-    border-radius: 20px;
+    border-radius: 4px;
     font-size: 14px;
     z-index: 1;
     position: relative;
@@ -983,18 +981,12 @@
     font-weight: 500;
   }
   
-  .detail-item:nth-child(3) span, /* Stock value */
-  .detail-item:nth-child(4) span { /* Price value */
-    font-weight: 700;
-  }
-  
   .product-actions {
     padding: 16px;
     border-top: 1px solid #eee;
     display: flex;
-    justify-content: flex-start;
+    justify-content: center;
     gap: 16px;
-    padding-left: 24px;
   }
   
   /* Loading Indicator */
@@ -1622,17 +1614,5 @@
   .detail-item .stock-alert.critical {
     color: #dc3545;
     border-color: rgba(220, 53, 69, 0.5);
-  }
-
-  .notification-item .status-out-of-stock {
-    background-color: rgba(244, 67, 54, 0.15);
-    color: #f44336;
-    font-weight: 600;
-  }
-
-  .event-item .status-out-of-stock {
-    background-color: rgba(244, 67, 54, 0.15);
-    color: #f44336;
-    font-weight: 600;
   }
 
