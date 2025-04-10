@@ -279,7 +279,11 @@ const loadAnalyticsData = async () => {
 // Add summary metrics section at the top
 const addSummaryMetrics = (products) => {
   // Check if metrics section already exists
-  if (document.getElementById('summary-metrics')) return;
+  if (document.getElementById('summary-metrics')) {
+    // If it exists, update it instead of creating a new one
+    updateMetricsSection(products);
+    return;
+  }
   
   // Calculate key metrics
   const totalProducts = products.length;
@@ -634,29 +638,34 @@ const addStockLevelChart = (products) => {
 // Load low stock alerts
 const loadLowStockAlerts = async () => {
   try {
-    // Fetch products with low stock
-    const response = await productAPI.getLowStockProducts();
+    // Fetch alerts data
+    const response = await fetch('/api/low-stock-alerts');
     
-    if (!response.success) {
-      throw new Error('Failed to load low stock data');
+    if (!response.ok) {
+      throw new Error('Failed to load low stock alerts');
     }
     
-    // Get current number of alerts for comparison
-    const previousAlertCount = lowStockItems.length;
+    const data = await response.json();
+    const lowStockProducts = data.success ? data.data : [];
     
-    // Update low stock items list
-    lowStockItems = response.data;
+    // Update low stock notifications
+    updateLowStockNotifications(lowStockProducts);
     
-    // Update notification UI
-    updateLowStockNotifications();
+    // Update global variables for notifications
+    if (lowStockItems.length < lowStockProducts.length) {
+      unreadLowStockCount += (lowStockProducts.length - lowStockItems.length);
+    }
+    lowStockItems = lowStockProducts;
+    updateNotificationBadge();
     
-    // If there are new alerts, increment unread count
-    if (lowStockItems.length > previousAlertCount) {
-      unreadLowStockCount += (lowStockItems.length - previousAlertCount);
-      updateNotificationBadge();
-      
-      // Show notification
-      showNotification(`${lowStockItems.length - previousAlertCount} new low stock alerts`, 'warning');
+    // Update the low stock count in the metrics section
+    const metricsContainer = document.getElementById('summary-metrics');
+    if (metricsContainer) {
+      const valueElements = metricsContainer.querySelectorAll('.metric-value');
+      if (valueElements.length >= 4) {
+        // Low Stock is the 4th metric (index 3)
+        valueElements[3].textContent = lowStockProducts.length;
+      }
     }
     
   } catch (error) {
@@ -665,17 +674,17 @@ const loadLowStockAlerts = async () => {
 };
 
 // Update low stock notifications panel
-const updateLowStockNotifications = () => {
+const updateLowStockNotifications = (products) => {
   const notificationsList = document.getElementById('stock-notifications');
   
   if (!notificationsList) return;
   
-  if (!lowStockItems || lowStockItems.length === 0) {
+  if (!products || products.length === 0) {
     notificationsList.innerHTML = '<li class="notification-item">No inventory alerts</li>';
     return;
   }
   
-  notificationsList.innerHTML = lowStockItems.map(item => {
+  notificationsList.innerHTML = products.map(item => {
     // Calculate how critical the stock level is
     const currentStock = parseFloat(item.current_stock);
     const minStock = parseFloat(item.min_stock_level);
@@ -789,6 +798,9 @@ const setupWebSocketListeners = () => {
       console.log('Product removed from analytics data:', productName);
     }
     
+    // Update the metrics section with real-time data
+    updateMetricsSection(productsData);
+    
     // Update all analytics visualizations with the new data
     updateAllAnalytics(productsData);
   });
@@ -805,9 +817,33 @@ const setupWebSocketListeners = () => {
       productsData[index].current_stock = data.newStock;
       console.log(`Stock updated for ${productsData[index].name}: ${oldStock} → ${data.newStock}`);
       
+      // Update the metrics section with real-time data
+      updateMetricsSection(productsData);
+      
       // Update all analytics visualizations with the new data
       updateAllAnalytics(productsData);
     }
+  });
+  
+  // Listen for low stock alerts
+  subscribeToEvent('low-stock-update', (data) => {
+    console.log('WebSocket: Received low stock update event', data);
+    
+    // Update low stock alerts
+    loadLowStockAlerts();
+    
+    // If data includes the affected product, update its status in productsData
+    if (data.product_id) {
+      const index = productsData.findIndex(p => p.id === data.product_id);
+      if (index !== -1) {
+        // Update the product status
+        productsData[index].status = 'low_stock';
+        console.log(`Updated status for ${productsData[index].name} to low_stock`);
+      }
+    }
+    
+    // Update the metrics section with real-time data
+    updateMetricsSection(productsData);
   });
   
   // Listen for direct events from the events API
@@ -817,16 +853,92 @@ const setupWebSocketListeners = () => {
     if (data.resource_type === 'product') {
       // For events not already handled by product-update
       if (!data.already_processed) {
-      loadAnalyticsData();
+        loadAnalyticsData();
       }
     }
   });
 };
 
+// Function to update just the metrics section with real-time data
+const updateMetricsSection = (products) => {
+  // Find existing metrics section
+  const metricsSection = document.getElementById('summary-metrics');
+  if (!metricsSection) {
+    // If it doesn't exist yet, create it
+    addSummaryMetrics(products);
+    return;
+  }
+  
+  // Calculate updated metrics
+  const totalProducts = products.length;
+  const totalInventoryValue = products.reduce((sum, product) => {
+    return sum + (product.current_stock * product.selling_price || 0);
+  }, 0);
+  const totalInventoryCost = products.reduce((sum, product) => {
+    return sum + (product.current_stock * product.cost_price || 0);
+  }, 0);
+  const potentialProfit = totalInventoryValue - totalInventoryCost;
+  const profitMargin = totalInventoryValue > 0 ? (potentialProfit / totalInventoryValue * 100) : 0;
+  
+  // Count products by status
+  const statusCounts = {
+    active: 0,
+    low_stock: 0,
+    inactive: 0,
+    out_of_stock: 0
+  };
+  
+  products.forEach(product => {
+    const status = product.status || 'unknown';
+    if (statusCounts.hasOwnProperty(status)) {
+      statusCounts[status]++;
+    }
+  });
+  
+  // Update the values in existing metrics section
+  const valueElements = metricsSection.querySelectorAll('.metric-value');
+  if (valueElements.length >= 4) {
+    // Total Products
+    valueElements[0].textContent = totalProducts;
+    
+    // Inventory Value
+    valueElements[1].textContent = `$${totalInventoryValue.toFixed(2)}`;
+    
+    // Potential Profit
+    valueElements[2].textContent = `$${potentialProfit.toFixed(2)}`;
+    const marginElement = valueElements[2].nextElementSibling;
+    if (marginElement && marginElement.classList.contains('metric-subtitle')) {
+      marginElement.textContent = `${profitMargin.toFixed(1)}% margin`;
+    }
+    
+    // Low Stock
+    valueElements[3].textContent = statusCounts.low_stock;
+  }
+  
+  // Update timestamp
+  const timestamp = metricsSection.querySelector('.refresh-timestamp');
+  if (timestamp) {
+    timestamp.innerHTML = `
+      Last updated: ${new Date().toLocaleString()}
+      <button id="refresh-data-btn" class="btn btn-text" title="Refresh Data">
+        <span class="material-icons">refresh</span>
+      </button>
+    `;
+    
+    // Re-add event listener to new refresh button
+    const refreshBtn = document.getElementById('refresh-data-btn');
+    if (refreshBtn) {
+      refreshBtn.addEventListener('click', () => {
+        loadAnalyticsData();
+      });
+    }
+  }
+};
+
 // Helper function to update all analytics visualizations at once
 const updateAllAnalytics = (products) => {
   // Update summary metrics first
-  addSummaryMetrics(products);
+  updateMetricsSection(products);
   
   // Update all charts with the latest data
   updateInventoryTrendsChart(products);
@@ -866,25 +978,6 @@ const updateAllAnalytics = (products) => {
     addStockLevelComparisonChart(products);
   } else {
     addStockLevelComparisonChart(products);
-  }
-  
-  // Update timestamp to show when this data was refreshed
-  const timestamp = document.querySelector('.refresh-timestamp');
-  if (timestamp) {
-    timestamp.innerHTML = `
-      Last updated: ${new Date().toLocaleString()}
-      <button id="refresh-data-btn" class="btn btn-text" title="Refresh Data">
-        <span class="material-icons">refresh</span>
-      </button>
-    `;
-    
-    // Re-add event listener to new refresh button
-    const refreshBtn = document.getElementById('refresh-data-btn');
-    if (refreshBtn) {
-      refreshBtn.addEventListener('click', () => {
-        loadAnalyticsData();
-      });
-    }
   }
 };
 
