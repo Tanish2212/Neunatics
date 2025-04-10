@@ -94,7 +94,7 @@ const loadProducts = async () => {
         
         if (categoryFilter) {
             filteredProducts = filteredProducts.filter(product => 
-                product.category === categoryFilter
+                product.category?.toLowerCase() === categoryFilter.toLowerCase()
             );
         }
         
@@ -284,6 +284,9 @@ const setupEventListeners = () => {
     // Category filter
     const categoryFilterSelect = document.getElementById('category-filter');
     if (categoryFilterSelect) {
+        // Populate category filter with real categories from products
+        updateCategoryFilter();
+        
         categoryFilterSelect.addEventListener('change', (e) => {
             categoryFilter = e.target.value;
             loadProducts();
@@ -728,5 +731,43 @@ const formatTimeAgo = (timestamp) => {
         return `${diffHours} hour${diffHours !== 1 ? 's' : ''} ago`;
     } else {
         return `${diffDays} day${diffDays !== 1 ? 's' : ''} ago`;
+    }
+};
+
+// Update category filter with actual categories from products
+const updateCategoryFilter = () => {
+    const categoryFilterSelect = document.getElementById('category-filter');
+    if (!categoryFilterSelect) return;
+    
+    // Keep the first "All Categories" option
+    const allOption = categoryFilterSelect.options[0];
+    
+    try {
+        // Get all available categories from products
+        productAPI.getAllProducts().then(response => {
+            if (response.success && Array.isArray(response.data)) {
+                // Extract unique categories
+                const categories = [...new Set(response.data.map(p => p.category).filter(Boolean))];
+                
+                // Sort categories alphabetically
+                categories.sort();
+                
+                // Clear existing options except the first one
+                categoryFilterSelect.innerHTML = '';
+                categoryFilterSelect.appendChild(allOption);
+                
+                // Add category options
+                categories.forEach(category => {
+                    const option = document.createElement('option');
+                    option.value = category;
+                    option.textContent = category.charAt(0).toUpperCase() + category.slice(1);
+                    categoryFilterSelect.appendChild(option);
+                });
+            }
+        }).catch(error => {
+            console.error('Error fetching categories:', error);
+        });
+    } catch (error) {
+        console.error('Error updating category filter:', error);
     }
 }; 
