@@ -32,6 +32,21 @@
         .chart-container {
             height: 350px;
         }
+        
+        /* Fix for notification panel */
+        #stock-notification-panel {
+            position: fixed;
+            top: 64px;
+            right: 0;
+            width: 320px;
+            z-index: 1000;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        
+        #stock-notification-panel.visible {
+            display: block;
+        }
     </style>
 </head>
 <body>

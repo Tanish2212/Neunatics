@@ -153,14 +153,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
         
-        // Validate selling price is higher than cost price
-        const costPrice = parseFloat(document.getElementById('product-cost-price').value) || 0;
-        const sellingPrice = parseFloat(document.getElementById('product-selling-price').value) || 0;
-        if (sellingPrice < costPrice) {
-            showFieldError(document.getElementById('product-selling-price'), 'Selling price should be higher than cost price');
-            isValid = false;
-        }
-        
         return isValid;
     }
     

@@ -1343,7 +1343,7 @@
   }
 
   .notification-panel.visible {
-    display: block;
+    display: block !important;
   }
 
   .notification-header {
