@@ -589,11 +589,26 @@ const addStockLevelChart = (products) => {
   };
   
   products.forEach(product => {
-    const status = product.status || 'unknown';
-    if (statusCounts.hasOwnProperty(status)) {
-      statusCounts[status]++;
+    // First check if product has zero stock - should count as out_of_stock regardless of status
+    if (product.current_stock === 0) {
+      statusCounts.out_of_stock++;
+    } 
+    // Then check status for other products
+    else {
+      const status = product.status || 'unknown';
+      if (statusCounts.hasOwnProperty(status)) {
+        statusCounts[status]++;
+      } else if (status === 'inactive') {
+        // Count inactive products (probably older term for out_of_stock)
+        statusCounts.out_of_stock++;
+      } else {
+        // Default to active if status is unknown
+        statusCounts.active++;
+      }
     }
   });
+  
+  console.log('Stock level counts:', statusCounts);
   
   // Create the chart
   const ctx = document.getElementById('stock-level-chart').getContext('2d');
