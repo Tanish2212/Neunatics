@@ -26,6 +26,10 @@
                     <span class="material-icons">bar_chart</span>
                     <a href="analytics.html">Analytics</a>
                 </li>
+                <li class="nav-item" id="notifications-button">
+                    <span class="material-icons">notifications</span>
+                    <span class="notification-badge" id="nav-notification-badge">0</span>
+                </li>
             </ul>
         </nav>
     </header>
@@ -106,6 +110,25 @@
                 <button class="btn btn-text" id="cancel-delete">Cancel</button>
                 <button class="btn btn-danger" id="confirm-delete">Delete</button>
             </div>
+        </div>
+    </div>
+
+    <!-- Stock Alert Notifications Panel -->
+    <div class="notification-panel" id="stock-notification-panel">
+        <div class="notification-header">
+            <div class="header-title">
+                <span class="material-icons">inventory</span>
+                <span>Inventory Alerts</span>
+                <span class="badge" id="stock-alert-count">0</span>
+            </div>
+            <div class="header-controls">
+                <span class="material-icons" id="close-notifications">close</span>
+            </div>
+        </div>
+        <div class="notification-content">
+            <ul class="notifications-list" id="stock-notifications">
+                <li class="notification-item">No inventory alerts</li>
+            </ul>
         </div>
     </div>
 

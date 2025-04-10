@@ -1,6 +1,8 @@
 // Global variables
 let activityUpdateInterval;
 let chartUpdateInterval;
+let unreadLowStockCount = 0;
+let lowStockItems = [];
 
 // Initialize dashboard
 document.addEventListener('DOMContentLoaded', async () => {
@@ -19,6 +21,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     // Set up event listeners
     setupEventListeners();
+
+    // Setup notification button
+    setupNotificationButton();
     
     // Cleanup on page unload
     window.addEventListener('beforeunload', () => {
@@ -151,6 +156,7 @@ async function loadRecentActivity() {
 async function loadLowStockAlerts() {
     try {
         const alertsList = document.getElementById('low-stock-alerts');
+        const stockNotifications = document.getElementById('stock-notifications');
         
         if (!alertsList) return;
         
@@ -166,6 +172,10 @@ async function loadLowStockAlerts() {
         
         if (response.data.length === 0) {
             alertsList.innerHTML = '<li class="event-item"><p>No low stock items found.</p></li>';
+            if (stockNotifications) {
+                stockNotifications.innerHTML = '<li class="notification-item">No inventory alerts</li>';
+            }
+            lowStockItems = [];
             return;
         }
         
@@ -200,6 +210,39 @@ async function loadLowStockAlerts() {
                 </li>
             `;
         }).join('');
+        
+        // Update notification panel
+        if (stockNotifications) {
+            if (response.data.length === 0) {
+                stockNotifications.innerHTML = '<li class="notification-item">No inventory alerts</li>';
+            } else {
+                stockNotifications.innerHTML = response.data.map(alert => {
+                    const currentStock = parseFloat(alert.current_stock);
+                    const minStock = parseFloat(alert.min_stock_level);
+                    const ratio = currentStock / minStock;
+                    
+                    let severityClass = 'warning';
+                    if (ratio <= 0.5) severityClass = 'critical';
+                    else if (ratio <= 0.75) severityClass = 'alert';
+                    
+                    return `
+                        <li class="notification-item ${severityClass}">
+                            <div class="notification-title">${alert.product_name}</div>
+                            <p>Stock: ${alert.current_stock}/${alert.min_stock_level} ${alert.unit}</p>
+                            <span class="notification-time">${formatTimeAgo(alert.last_updated)}</span>
+                        </li>
+                    `;
+                }).join('');
+            }
+        }
+        
+        // Update global variable for notifications
+        if (lowStockItems.length < response.data.length) {
+            unreadLowStockCount += (response.data.length - lowStockItems.length);
+        }
+        lowStockItems = response.data;
+        updateNotificationBadge();
+        
     } catch (error) {
         console.error('Error loading low stock alerts:', error);
         // Load mock alerts data
@@ -734,5 +777,58 @@ function formatEventType(type) {
             return 'Stock Removed';
         default:
             return type.charAt(0).toUpperCase() + type.slice(1);
+    }
+}
+
+// Setup notification button
+function setupNotificationButton() {
+    const notificationButton = document.getElementById('notifications-button');
+    const notificationPanel = document.getElementById('stock-notification-panel');
+    const closeNotifications = document.getElementById('close-notifications');
+    
+    if (notificationButton && notificationPanel && closeNotifications) {
+        // Toggle notification panel
+        notificationButton.addEventListener('click', () => {
+            notificationPanel.classList.toggle('visible');
+            
+            // Mark notifications as read when panel is opened
+            if (notificationPanel.classList.contains('visible')) {
+                unreadLowStockCount = 0;
+                updateNotificationBadge();
+            }
+        });
+        
+        // Close notification panel
+        closeNotifications.addEventListener('click', () => {
+            notificationPanel.classList.remove('visible');
+        });
+        
+        // Close panel if clicked outside
+        document.addEventListener('click', (event) => {
+            if (!notificationPanel.contains(event.target) && 
+                !notificationButton.contains(event.target) && 
+                notificationPanel.classList.contains('visible')) {
+                notificationPanel.classList.remove('visible');
+            }
+        });
+    }
+}
+
+// Update notification badge
+function updateNotificationBadge() {
+    const badge = document.getElementById('nav-notification-badge');
+    const stockAlertCount = document.getElementById('stock-alert-count');
+    
+    if (badge) {
+        if (unreadLowStockCount > 0) {
+            badge.textContent = unreadLowStockCount;
+            badge.classList.add('visible');
+        } else {
+            badge.classList.remove('visible');
+        }
+    }
+    
+    if (stockAlertCount) {
+        stockAlertCount.textContent = lowStockItems.length;
     }
 }

@@ -7,6 +7,8 @@ let categoryFilter = '';
 let statusFilter = '';
 let fakeData = null;
 let updateInterval;
+let unreadLowStockCount = 0;
+let lowStockItems = [];
 
 // Initialize the page
 document.addEventListener('DOMContentLoaded', async () => {
@@ -28,6 +30,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     // Setup event listeners
     setupEventListeners();
+
+    // Setup notification button
+    setupNotificationButton();
+
+    // Load low stock items for notifications
+    loadLowStockAlerts();
     
     // Cleanup on page unload
     window.addEventListener('beforeunload', () => {
@@ -556,5 +564,169 @@ const updatePaginationUI = () => {
     
     if (pageInfo) {
         pageInfo.textContent = `Page ${currentPage} of ${totalPages}`;
+    }
+};
+
+// Setup notification button
+const setupNotificationButton = () => {
+    const notificationButton = document.getElementById('notifications-button');
+    const notificationPanel = document.getElementById('stock-notification-panel');
+    const closeNotifications = document.getElementById('close-notifications');
+    
+    if (notificationButton && notificationPanel && closeNotifications) {
+        // Toggle notification panel
+        notificationButton.addEventListener('click', () => {
+            notificationPanel.classList.toggle('visible');
+            
+            // Mark notifications as read when panel is opened
+            if (notificationPanel.classList.contains('visible')) {
+                unreadLowStockCount = 0;
+                updateNotificationBadge();
+            }
+        });
+        
+        // Close notification panel
+        closeNotifications.addEventListener('click', () => {
+            notificationPanel.classList.remove('visible');
+        });
+        
+        // Close panel if clicked outside
+        document.addEventListener('click', (event) => {
+            if (!notificationPanel.contains(event.target) && 
+                !notificationButton.contains(event.target) && 
+                notificationPanel.classList.contains('visible')) {
+                notificationPanel.classList.remove('visible');
+            }
+        });
+    }
+};
+
+// Update notification badge
+const updateNotificationBadge = () => {
+    const badge = document.getElementById('nav-notification-badge');
+    const stockAlertCount = document.getElementById('stock-alert-count');
+    
+    if (badge) {
+        if (unreadLowStockCount > 0) {
+            badge.textContent = unreadLowStockCount;
+            badge.classList.add('visible');
+        } else {
+            badge.classList.remove('visible');
+        }
+    }
+    
+    if (stockAlertCount) {
+        stockAlertCount.textContent = lowStockItems.length;
+    }
+};
+
+// Load low stock alerts
+const loadLowStockAlerts = async () => {
+    try {
+        // Fetch alerts data
+        const response = await fetch('/api/low-stock-alerts');
+        
+        if (!response.ok) {
+            throw new Error('Failed to load low stock alerts');
+        }
+        
+        const data = await response.json();
+        const lowStockProducts = data.success ? data.data : [];
+        
+        // Update notification panel
+        const stockNotifications = document.getElementById('stock-notifications');
+        
+        if (stockNotifications) {
+            if (lowStockProducts.length === 0) {
+                stockNotifications.innerHTML = '<li class="notification-item">No inventory alerts</li>';
+            } else {
+                stockNotifications.innerHTML = lowStockProducts.map(alert => {
+                    const currentStock = parseFloat(alert.current_stock);
+                    const minStock = parseFloat(alert.min_stock_level);
+                    const ratio = currentStock / minStock;
+                    
+                    let severityClass = 'warning';
+                    if (ratio <= 0.5) severityClass = 'critical';
+                    else if (ratio <= 0.75) severityClass = 'alert';
+                    
+                    return `
+                        <li class="notification-item ${severityClass}">
+                            <div class="notification-title">${alert.product_name || alert.name}</div>
+                            <p>Stock: ${alert.current_stock}/${alert.min_stock_level} ${alert.unit}</p>
+                            <span class="notification-time">${formatTimeAgo(alert.last_updated || new Date())}</span>
+                        </li>
+                    `;
+                }).join('');
+            }
+        }
+        
+        // Update global variables for notifications
+        if (lowStockItems.length < lowStockProducts.length) {
+            unreadLowStockCount += (lowStockProducts.length - lowStockItems.length);
+        }
+        lowStockItems = lowStockProducts;
+        updateNotificationBadge();
+        
+    } catch (error) {
+        console.error('Error loading low stock alerts:', error);
+        
+        // Fallback: Use products list to determine low stock items
+        const lowStockProductsFromList = products.filter(p => 
+            p.status === 'low_stock' || 
+            (p.current_stock && p.min_stock_level && p.current_stock <= p.min_stock_level)
+        );
+        
+        // Update notification panel
+        const stockNotifications = document.getElementById('stock-notifications');
+        
+        if (stockNotifications) {
+            if (lowStockProductsFromList.length === 0) {
+                stockNotifications.innerHTML = '<li class="notification-item">No inventory alerts</li>';
+            } else {
+                stockNotifications.innerHTML = lowStockProductsFromList.map(product => {
+                    const currentStock = parseFloat(product.current_stock);
+                    const minStock = parseFloat(product.min_stock_level);
+                    const ratio = currentStock / minStock;
+                    
+                    let severityClass = 'warning';
+                    if (ratio <= 0.5) severityClass = 'critical';
+                    else if (ratio <= 0.75) severityClass = 'alert';
+                    
+                    return `
+                        <li class="notification-item ${severityClass}">
+                            <div class="notification-title">${product.name}</div>
+                            <p>Stock: ${product.current_stock}/${product.min_stock_level} ${product.unit}</p>
+                            <span class="notification-time">Just now</span>
+                        </li>
+                    `;
+                }).join('');
+            }
+        }
+        
+        lowStockItems = lowStockProductsFromList;
+        unreadLowStockCount = lowStockProductsFromList.length;
+        updateNotificationBadge();
+    }
+};
+
+// Helper function for formatting time ago
+const formatTimeAgo = (timestamp) => {
+    const now = new Date();
+    const past = new Date(timestamp);
+    const diffMs = now - past;
+    
+    const diffSecs = Math.floor(diffMs / 1000);
+    const diffMins = Math.floor(diffSecs / 60);
+    const diffHours = Math.floor(diffMins / 60);
+    const diffDays = Math.floor(diffHours / 24);
+    
+    if (diffSecs < 60) {
+        return 'Just now';
+    } else if (diffMins < 60) {
+        return `${diffMins} minute${diffMins !== 1 ? 's' : ''} ago`;
+    } else if (diffHours < 24) {
+        return `${diffHours} hour${diffHours !== 1 ? 's' : ''} ago`;
+    } else {
+        return `${diffDays} day${diffDays !== 1 ? 's' : ''} ago`;
     }
 }; 
