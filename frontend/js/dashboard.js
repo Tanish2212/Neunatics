@@ -196,11 +196,21 @@ async function loadLowStockAlerts() {
             
             const stockDiff = minStock - currentStock;
             
+            // Determine status text and class based on stock level
+            let statusText = 'Low Stock';
+            let statusClass = 'status-low_stock';
+            
+            // If stock is zero, change to NO STOCK
+            if (currentStock === 0) {
+                statusText = 'NO STOCK';
+                statusClass = 'status-out-of-stock';
+            }
+            
             return `
                 <li class="event-item stock-alert ${severityClass}">
                     <div class="event-header">
                         <span class="event-title">${alert.product_name}</span>
-                        <span class="status-chip status-low_stock">Low Stock</span>
+                        <span class="status-chip ${statusClass}">${statusText}</span>
                     </div>
                     <p>Current stock: <strong>${alert.current_stock}</strong> ${alert.unit}</p>
                     <p>Min. required: ${alert.min_stock_level} ${alert.unit} 
@@ -225,10 +235,16 @@ async function loadLowStockAlerts() {
                     if (ratio <= 0.5) severityClass = 'critical';
                     else if (ratio <= 0.75) severityClass = 'alert';
                     
+                    // Determine status text for notification panel
+                    let statusInfo = `Stock: ${alert.current_stock}/${alert.min_stock_level} ${alert.unit}`;
+                    if (currentStock === 0) {
+                        statusInfo = `<span style="color: #f44336; font-weight: 600;">NO STOCK</span> (Min: ${alert.min_stock_level} ${alert.unit})`;
+                    }
+                    
                     return `
                         <li class="notification-item ${severityClass}">
                             <div class="notification-title">${alert.product_name}</div>
-                            <p>Stock: ${alert.current_stock}/${alert.min_stock_level} ${alert.unit}</p>
+                            <p>${statusInfo}</p>
                             <span class="notification-time">${formatTimeAgo(alert.last_updated)}</span>
                         </li>
                     `;

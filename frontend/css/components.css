@@ -1630,3 +1630,9 @@
     font-weight: 600;
   }
 
+  .event-item .status-out-of-stock {
+    background-color: rgba(244, 67, 54, 0.15);
+    color: #f44336;
+    font-weight: 600;
+  }
+
