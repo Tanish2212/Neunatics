@@ -233,8 +233,9 @@
   }
   
   .status-out_of_stock {
-    background-color: rgba(244, 67, 54, 0.1);
-    color: var(--error-color);
+    background-color: rgba(244, 67, 54, 0.15);
+    color: #f44336;
+    font-weight: 600;
   }
   
   .status-discontinued {
@@ -1621,5 +1622,11 @@
   .detail-item .stock-alert.critical {
     color: #dc3545;
     border-color: rgba(220, 53, 69, 0.5);
+  }
+
+  .notification-item .status-out-of-stock {
+    background-color: rgba(244, 67, 54, 0.15);
+    color: #f44336;
+    font-weight: 600;
   }
 

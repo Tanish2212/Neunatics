@@ -267,26 +267,32 @@ const loadAnalyticsData = async () => {
 const updateInventoryValueChart = (products) => {
   if (!products || products.length === 0 || !charts.inventoryTrends) return;
   
-  // Sort products by inventory value (price * quantity) descending
-  const sortedProducts = [...products].sort((a, b) => {
-    const valueA = (a.current_stock || 0) * (a.selling_price || 0);
-    const valueB = (b.current_stock || 0) * (b.selling_price || 0);
-    return valueB - valueA;
-  });
+  // Get the 10 most recent products based on creation date
+  const recentProducts = [...products]
+    .filter(product => product.created_at) // Ensure created_at exists
+    .sort((a, b) => {
+      // Sort by creation date (newest first)
+      const dateA = new Date(a.created_at);
+      const dateB = new Date(b.created_at);
+      return dateB - dateA;
+    })
+    .slice(0, 10); // Take only 10 most recent products
+    
+  // If there aren't enough products with created_at, fall back to the first 10
+  const productsToDisplay = recentProducts.length >= 5 ? recentProducts : products.slice(0, 10);
   
-  // Calculate the total inventory value and prepare chart data
+  // Calculate the inventory value and prepare chart data
   const productNames = [];
   const inventoryValues = [];
   const productCounts = [];
   let cumulativeCount = 0;
   
-  // Take top 20 products for readability
-  const displayProducts = sortedProducts.slice(0, 20);
-  
-  displayProducts.forEach(product => {
+  productsToDisplay.forEach(product => {
     const value = (product.current_stock || 0) * (product.selling_price || 0);
-    productNames.push(product.name);
-    inventoryValues.push(value);
+    // Truncate long product names for better display
+    const displayName = product.name.length > 15 ? product.name.substring(0, 15) + '...' : product.name;
+    productNames.push(displayName);
+    inventoryValues.push(value.toFixed(2)); // Round to 2 decimal places
     
     cumulativeCount += 1;
     productCounts.push(cumulativeCount);
@@ -297,10 +303,13 @@ const updateInventoryValueChart = (products) => {
   charts.inventoryTrends.data.datasets[0].data = inventoryValues;
   charts.inventoryTrends.data.datasets[1].data = productCounts;
   
+  // Update chart title to reflect this is showing recent products
+  charts.inventoryTrends.options.plugins.title.text = 'Recent Products - Inventory Value';
+  
   // Update chart
   charts.inventoryTrends.update();
   
-  console.log('Inventory value chart updated with real-time data');
+  console.log('Inventory value chart updated with 10 most recent products');
 };
 
 // Update category distribution chart
@@ -433,17 +442,27 @@ const updateLowStockNotifications = () => {
     
     let severityClass = 'stock-alert warning'; // default yellow warning
     
-    if (ratio <= 0) {
+    if (ratio <= 0 || currentStock === 0) {
       severityClass = 'stock-alert critical'; // red - out of stock
     } else if (ratio < 0.5) {
       severityClass = 'stock-alert alert'; // orange - very low stock
+    }
+    
+    // Determine status badge text and class
+    let statusText = formatStatus(item.status);
+    let statusClass = `status-${item.status}`;
+    
+    // Override status for zero stock
+    if (currentStock === 0) {
+      statusText = 'NO STOCK';
+      statusClass = 'status-out-of-stock';
     }
     
     return `
       <li class="notification-item">
         <div class="notification-header">
           <strong>${item.name}</strong>
-          <span class="status-chip status-${item.status}">${formatStatus(item.status)}</span>
+          <span class="status-chip ${statusClass}">${statusText}</span>
         </div>
         <div class="${severityClass}">
           <p>Current stock: <b>${item.current_stock}</b> ${item.unit}</p>
@@ -518,15 +537,55 @@ const setupWebSocketListeners = () => {
   // Connect to Socket.IO
   connectWebSocket();
   
-  // Listen for product updates (new, updated, or deleted products)
+  // Listen for product updates
   subscribeToEvent('product-update', (data) => {
-    console.log('WebSocket received product update:', data);
+    console.log('WebSocket: Received product update event', data);
     
-    // Refresh analytics data when product data changes
-    loadAnalyticsData();
+    // Handle product creation
+    if (data.type === 'create') {
+      // Add new product to productsData array
+      productsData.push(data.data);
+      // Update inventory trends chart immediately to reflect the new product
+      updateInventoryValueChart(productsData);
+    }
+    // Handle product update
+    else if (data.type === 'update') {
+      // Find and update the product in productsData array
+      const index = productsData.findIndex(p => p.id === data.data.id);
+      if (index !== -1) {
+        productsData[index] = data.data;
+        // Update inventory trends chart to reflect changes
+        updateInventoryValueChart(productsData);
+      }
+    }
+    // Handle product deletion
+    else if (data.type === 'delete') {
+      // Remove product from productsData array
+      productsData = productsData.filter(p => p.id !== data.data.id);
+      // Update inventory trends chart to reflect deletion
+      updateInventoryValueChart(productsData);
+    }
+    
+    // Also update other charts if needed
+    updateCategoryDistributionChart(productsData);
+    updateHotSellingProducts(productsData);
     
     // Check for low stock updates
     loadLowStockAlerts();
+  });
+  
+  // Listen for stock updates
+  subscribeToEvent('stock-update', (data) => {
+    console.log('WebSocket: Received stock update event', data);
+    
+    // Find and update the product in productsData array
+    const index = productsData.findIndex(p => p.id === data.productId);
+    if (index !== -1) {
+      // Update product stock
+      productsData[index].current_stock = data.newStock;
+      // Update inventory trends chart to reflect stock changes
+      updateInventoryValueChart(productsData);
+    }
   });
   
   // Listen for direct events from the events API
@@ -534,7 +593,10 @@ const setupWebSocketListeners = () => {
     console.log('WebSocket received event API event:', data);
     // Only reload if it's a product-related event
     if (data.resource_type === 'product') {
-      loadAnalyticsData();
+      // For events not already handled by product-update
+      if (!data.already_processed) {
+        loadAnalyticsData();
+      }
     }
   });
 };
