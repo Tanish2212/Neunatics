@@ -250,11 +250,12 @@
   
   .search-box input {
     width: 100%;
-    padding: var(--spacing-md);
-    padding-right: 40px;
-    border: 1px solid var(--border-color);
-    border-radius: var(--border-radius);
-    font-size: 1rem;
+    padding: 8px 16px 8px 40px;
+    border: 1px solid #ddd;
+    border-radius: 20px;
+    font-size: 14px;
+    z-index: 1;
+    position: relative;
   }
   
   .search-box .material-icons {
@@ -853,8 +854,10 @@
     width: 100%;
     padding: 8px 16px 8px 40px;
     border: 1px solid #ddd;
-    border-radius: 4px;
+    border-radius: 20px;
     font-size: 14px;
+    z-index: 1;
+    position: relative;
   }
   
   .search-box .material-icons {
@@ -863,6 +866,8 @@
     top: 50%;
     transform: translateY(-50%);
     color: #666;
+    z-index: 2;
+    pointer-events: none;
   }
   
   .filter-group {
@@ -871,11 +876,29 @@
   }
   
   .filter-group select {
-    padding: 8px 16px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    background-color: white;
     font-size: 14px;
-    background: #fff;
+    color: var(--text-primary);
+    min-width: 150px;
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+    background-size: 16px;
+  }
+  
+  .filter-group select:hover {
+    border-color: #3cc272;
+  }
+  
+  .filter-group select:focus {
+    outline: none;
+    border-color: #3cc272;
+    box-shadow: 0 0 0 2px rgba(60, 194, 114, 0.2);
   }
   
   .products-grid {
@@ -889,6 +912,11 @@
     border-radius: 8px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     overflow: hidden;
+    transition: box-shadow 0.3s ease;
+  }
+  
+  .product-card:hover {
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
   }
   
   .product-header {
@@ -897,34 +925,35 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
+    background-color: #3cc272;
+    color: white;
   }
   
   .product-header h3 {
     margin: 0;
-    font-size: 16px;
-    color: #333;
-  }
-  
-  .product-status {
-    padding: 4px 8px;
-    border-radius: 4px;
-    font-size: 12px;
+    font-size: 18px;
+    color: white;
     font-weight: 500;
   }
   
+  .product-status {
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 600;
+    background-color: white;
+  }
+  
   .status-active {
-    background: #e6f4ea;
-    color: #1e7e34;
+    color: #4CAF50;
   }
   
   .status-low_stock {
-    background: #fff3cd;
-    color: #856404;
+    color: #FF9800;
   }
   
   .status-inactive {
-    background: #f8d7da;
-    color: #dc3545;
+    color: #F44336;
   }
   
   .product-details {
@@ -932,26 +961,39 @@
   }
   
   .detail-item {
-    margin-bottom: 8px;
+    margin-bottom: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
   }
   
   .detail-item label {
-    display: block;
-    font-size: 12px;
+    display: inline-block;
+    font-size: 14px;
     color: #666;
-    margin-bottom: 2px;
+    margin-bottom: 0;
+    font-weight: 500;
   }
   
   .detail-item span {
     font-size: 14px;
     color: #333;
+    text-align: right;
+    font-weight: 500;
+  }
+  
+  .detail-item:nth-child(3) span, /* Stock value */
+  .detail-item:nth-child(4) span { /* Price value */
+    font-weight: 700;
   }
   
   .product-actions {
     padding: 16px;
     border-top: 1px solid #eee;
     display: flex;
-    gap: 8px;
+    justify-content: flex-start;
+    gap: 16px;
+    padding-left: 24px;
   }
   
   /* Loading Indicator */
@@ -1156,9 +1198,7 @@
   }
 
   .product-status.status-low_stock {
-    background-color: rgba(255, 193, 7, 0.15);
-    color: #856404;
-    border: 1px solid rgba(255, 193, 7, 0.5);
+    color: #FF9800;
   }
 
   .product-stock-warning {
@@ -1559,28 +1599,27 @@
   /* Product card stock alerts */
   .detail-item .stock-alert {
     margin-left: 8px;
-    padding: 2px 6px;
-    border-radius: 4px;
+    padding: 3px 8px;
+    border-radius: 12px;
     font-size: 0.75rem;
-    font-weight: 500;
+    font-weight: 600;
     display: inline-block;
+    background-color: white;
+    border: 1px solid rgba(0, 0, 0, 0.1);
   }
 
   .detail-item .stock-alert.warning {
-    background-color: rgba(255, 193, 7, 0.15);
     color: #856404;
-    border: 1px solid rgba(255, 193, 7, 0.5);
+    border-color: rgba(255, 193, 7, 0.5);
   }
 
   .detail-item .stock-alert.alert {
-    background-color: rgba(253, 126, 20, 0.15);
     color: #fd7e14;
-    border: 1px solid rgba(253, 126, 20, 0.5);
+    border-color: rgba(253, 126, 20, 0.5);
   }
 
   .detail-item .stock-alert.critical {
-    background-color: rgba(220, 53, 69, 0.15);
     color: #dc3545;
-    border: 1px solid rgba(220, 53, 69, 0.5);
+    border-color: rgba(220, 53, 69, 0.5);
   }
 
