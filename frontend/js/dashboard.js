@@ -221,31 +221,46 @@ async function loadLowStockAlerts() {
             `;
         }).join('');
         
-        // Update notification panel
+        // Update notification panel to match analytics.js styling
         if (stockNotifications) {
             if (response.data.length === 0) {
                 stockNotifications.innerHTML = '<li class="notification-item">No inventory alerts</li>';
             } else {
                 stockNotifications.innerHTML = response.data.map(alert => {
+                    // Calculate how critical the stock level is
                     const currentStock = parseFloat(alert.current_stock);
                     const minStock = parseFloat(alert.min_stock_level);
                     const ratio = currentStock / minStock;
                     
-                    let severityClass = 'warning';
-                    if (ratio <= 0.5) severityClass = 'critical';
-                    else if (ratio <= 0.75) severityClass = 'alert';
+                    let severityClass = 'stock-alert warning'; // default yellow warning
                     
-                    // Determine status text for notification panel
-                    let statusInfo = `Stock: ${alert.current_stock}/${alert.min_stock_level} ${alert.unit}`;
+                    if (ratio <= 0 || currentStock === 0) {
+                        severityClass = 'stock-alert critical'; // red - out of stock
+                    } else if (ratio < 0.5) {
+                        severityClass = 'stock-alert alert'; // orange - very low stock
+                    }
+                    
+                    // Determine status badge text and class
+                    let statusText = formatStatus(alert.status || 'low_stock');
+                    let statusClass = `status-${alert.status || 'low_stock'}`;
+                    
+                    // Override status for zero stock
                     if (currentStock === 0) {
-                        statusInfo = `<span style="color: #f44336; font-weight: 600;">NO STOCK</span> (Min: ${alert.min_stock_level} ${alert.unit})`;
+                        statusText = 'NO STOCK';
+                        statusClass = 'status-out-of-stock';
                     }
                     
                     return `
-                        <li class="notification-item ${severityClass}">
-                            <div class="notification-title">${alert.product_name}</div>
-                            <p>${statusInfo}</p>
-                            <span class="notification-time">${formatTimeAgo(alert.last_updated)}</span>
+                        <li class="notification-item">
+                            <div class="notification-header">
+                                <strong>${alert.product_name}</strong>
+                                <span class="status-chip ${statusClass}">${statusText}</span>
+                            </div>
+                            <div class="${severityClass}">
+                                <p>Current stock: <b>${alert.current_stock}</b> ${alert.unit}</p>
+                                <p>Minimum stock: ${alert.min_stock_level} ${alert.unit}</p>
+                            </div>
+                            <p class="notification-time">${formatTimeAgo(alert.last_updated)}</p>
                         </li>
                     `;
                 }).join('');
@@ -263,6 +278,24 @@ async function loadLowStockAlerts() {
         console.error('Error loading low stock alerts:', error);
         // Load mock alerts data
         loadMockAlertsData();
+    }
+}
+
+// Helper function to format status text
+function formatStatus(status) {
+    if (!status) return 'Unknown';
+    
+    switch (status.toLowerCase()) {
+        case 'active':
+            return 'Active';
+        case 'low_stock':
+            return 'Low Stock';
+        case 'out_of_stock':
+            return 'Out of Stock';
+        case 'discontinued':
+            return 'Discontinued';
+        default:
+            return status.charAt(0).toUpperCase() + status.slice(1);
     }
 }
 

@@ -644,19 +644,40 @@ const loadLowStockAlerts = async () => {
                 stockNotifications.innerHTML = '<li class="notification-item">No inventory alerts</li>';
             } else {
                 stockNotifications.innerHTML = lowStockProducts.map(alert => {
+                    // Calculate how critical the stock level is
                     const currentStock = parseFloat(alert.current_stock);
                     const minStock = parseFloat(alert.min_stock_level);
                     const ratio = currentStock / minStock;
                     
-                    let severityClass = 'warning';
-                    if (ratio <= 0.5) severityClass = 'critical';
-                    else if (ratio <= 0.75) severityClass = 'alert';
+                    let severityClass = 'stock-alert warning'; // default yellow warning
+                    
+                    if (ratio <= 0 || currentStock === 0) {
+                        severityClass = 'stock-alert critical'; // red - out of stock
+                    } else if (ratio < 0.5) {
+                        severityClass = 'stock-alert alert'; // orange - very low stock
+                    }
+                    
+                    // Determine status badge text and class
+                    let statusText = formatStatus(alert.status || 'low_stock');
+                    let statusClass = `status-${alert.status || 'low_stock'}`;
+                    
+                    // Override status for zero stock
+                    if (currentStock === 0) {
+                        statusText = 'NO STOCK';
+                        statusClass = 'status-out-of-stock';
+                    }
                     
                     return `
-                        <li class="notification-item ${severityClass}">
-                            <div class="notification-title">${alert.product_name || alert.name}</div>
-                            <p>Stock: ${alert.current_stock}/${alert.min_stock_level} ${alert.unit}</p>
-                            <span class="notification-time">${formatTimeAgo(alert.last_updated || new Date())}</span>
+                        <li class="notification-item">
+                            <div class="notification-header">
+                                <strong>${alert.product_name || alert.name}</strong>
+                                <span class="status-chip ${statusClass}">${statusText}</span>
+                            </div>
+                            <div class="${severityClass}">
+                                <p>Current stock: <b>${alert.current_stock}</b> ${alert.unit}</p>
+                                <p>Minimum stock: ${alert.min_stock_level} ${alert.unit}</p>
+                            </div>
+                            <p class="notification-time">${formatTimeAgo(alert.last_updated || new Date())}</p>
                         </li>
                     `;
                 }).join('');
@@ -691,15 +712,35 @@ const loadLowStockAlerts = async () => {
                     const minStock = parseFloat(product.min_stock_level);
                     const ratio = currentStock / minStock;
                     
-                    let severityClass = 'warning';
-                    if (ratio <= 0.5) severityClass = 'critical';
-                    else if (ratio <= 0.75) severityClass = 'alert';
+                    let severityClass = 'stock-alert warning'; // default yellow warning
+                    
+                    if (ratio <= 0 || currentStock === 0) {
+                        severityClass = 'stock-alert critical'; // red - out of stock
+                    } else if (ratio < 0.5) {
+                        severityClass = 'stock-alert alert'; // orange - very low stock
+                    }
+                    
+                    // Determine status badge text and class
+                    let statusText = formatStatus(product.status || 'low_stock');
+                    let statusClass = `status-${product.status || 'low_stock'}`;
+                    
+                    // Override status for zero stock
+                    if (currentStock === 0) {
+                        statusText = 'NO STOCK';
+                        statusClass = 'status-out-of-stock';
+                    }
                     
                     return `
-                        <li class="notification-item ${severityClass}">
-                            <div class="notification-title">${product.name}</div>
-                            <p>Stock: ${product.current_stock}/${product.min_stock_level} ${product.unit}</p>
-                            <span class="notification-time">Just now</span>
+                        <li class="notification-item">
+                            <div class="notification-header">
+                                <strong>${product.name}</strong>
+                                <span class="status-chip ${statusClass}">${statusText}</span>
+                            </div>
+                            <div class="${severityClass}">
+                                <p>Current stock: <b>${product.current_stock}</b> ${product.unit}</p>
+                                <p>Minimum stock: ${product.min_stock_level} ${product.unit}</p>
+                            </div>
+                            <p class="notification-time">Just now</p>
                         </li>
                     `;
                 }).join('');
@@ -731,6 +772,24 @@ const formatTimeAgo = (timestamp) => {
         return `${diffHours} hour${diffHours !== 1 ? 's' : ''} ago`;
     } else {
         return `${diffDays} day${diffDays !== 1 ? 's' : ''} ago`;
+    }
+};
+
+// Helper function to format status text
+const formatStatus = (status) => {
+    if (!status) return 'Unknown';
+    
+    switch (status.toLowerCase()) {
+        case 'active':
+            return 'Active';
+        case 'low_stock':
+            return 'Low Stock';
+        case 'out_of_stock':
+            return 'Out of Stock';
+        case 'discontinued':
+            return 'Discontinued';
+        default:
+            return status.charAt(0).toUpperCase() + status.slice(1);
     }
 };
 
