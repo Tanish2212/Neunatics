@@ -537,17 +537,15 @@ const updateCategoryDistributionChart = (products) => {
 
 // Add stock level chart (new chart)
 const addStockLevelChart = (products) => {
-  // Check if the container element exists
-  const container = document.querySelector('.grid-container');
+  // Use the dedicated container for stock level chart
+  const container = document.getElementById('stock-level-container');
   if (!container) return;
   
   // Check if this chart already exists
   if (document.getElementById('stock-level-chart')) return;
   
-  // Create a new chart container
-  const chartContainer = document.createElement('div');
-  chartContainer.className = 'grid-item full-width';
-  chartContainer.innerHTML = `
+  // Create the chart content
+  container.innerHTML = `
     <div class="card">
       <div class="card-header">
         <h3>Stock Levels by Status</h3>
@@ -557,9 +555,6 @@ const addStockLevelChart = (products) => {
       </div>
     </div>
   `;
-  
-  // Add the new chart container to the grid
-  container.appendChild(chartContainer);
   
   // Count products by status
   const statusCounts = {
@@ -984,7 +979,7 @@ const updateAllAnalytics = (products) => {
 // Add price comparison chart (cost vs selling)
 const addPriceComparisonChart = (products) => {
   // Check if the container element exists
-  const container = document.querySelector('.grid-container');
+  const container = document.getElementById('additional-charts-container');
   if (!container) return;
   
   // Check if this chart already exists
@@ -992,7 +987,7 @@ const addPriceComparisonChart = (products) => {
   
   // Create a new chart container
   const chartContainer = document.createElement('div');
-  chartContainer.className = 'grid-item';
+  chartContainer.className = 'chart-grid-item';
   chartContainer.innerHTML = `
     <div class="card">
       <div class="card-header">
@@ -1051,31 +1046,34 @@ const addPriceComparisonChart = (products) => {
         tooltip: {
           mode: 'index',
           intersect: false
+        },
+        legend: {
+          position: 'top',
         }
       },
       scales: {
         x: {
-          ticks: {
-            maxRotation: 45,
-            minRotation: 45
+          title: {
+            display: true,
+            text: 'Products'
           }
         },
         y: {
-          beginAtZero: true,
           title: {
             display: true,
             text: 'Price ($)'
-          }
+          },
+          beginAtZero: true
         }
       }
     }
   });
 };
 
-// Add inventory turnover chart (estimated based on current data)
+// Add inventory turnover chart
 const addInventoryTurnoverChart = (products) => {
   // Check if the container element exists
-  const container = document.querySelector('.grid-container');
+  const container = document.getElementById('additional-charts-container');
   if (!container) return;
   
   // Check if this chart already exists
@@ -1083,7 +1081,7 @@ const addInventoryTurnoverChart = (products) => {
   
   // Create a new chart container
   const chartContainer = document.createElement('div');
-  chartContainer.className = 'grid-item';
+  chartContainer.className = 'chart-grid-item';
   chartContainer.innerHTML = `
     <div class="card">
       <div class="card-header">
@@ -1098,32 +1096,33 @@ const addInventoryTurnoverChart = (products) => {
   // Add the new chart container to the grid
   container.appendChild(chartContainer);
   
-  // Calculate turnover by category (using sales_count if available)
-  const categoryTurnover = {};
-  const categoryCounts = {};
+  // Calculate inventory turnover by category
+  const categoriesTurnover = {};
+  const categoriesValue = {};
   
   products.forEach(product => {
     const category = product.category || 'Uncategorized';
-    const salesCount = product.sales_count || Math.floor(Math.random() * 50); // Use random data if real data not available
-    const inventoryLevel = product.current_stock || 1;
+    const salesCount = product.sales_count || 0;
+    const inventoryValue = (product.current_stock || 0) * (product.selling_price || 0);
     
-    // Accumulate total sales and count for average calculation
-    if (!categoryTurnover[category]) {
-      categoryTurnover[category] = 0;
-      categoryCounts[category] = 0;
+    if (!categoriesTurnover[category]) {
+      categoriesTurnover[category] = 0;
+      categoriesValue[category] = 0;
     }
     
-    // Calculate turnover rate for this product (sales / inventory)
-    const turnoverRate = salesCount / inventoryLevel;
-    categoryTurnover[category] += turnoverRate;
-    categoryCounts[category]++;
+    categoriesTurnover[category] += salesCount;
+    categoriesValue[category] += inventoryValue;
   });
   
-  // Calculate average turnover by category
-  const categories = Object.keys(categoryTurnover);
-  const turnoverRates = categories.map(category => 
-    categoryTurnover[category] / categoryCounts[category]
-  );
+  // Calculate turnover ratio
+  const categories = Object.keys(categoriesTurnover);
+  const turnoverRatios = categories.map(category => {
+    const inventoryValue = categoriesValue[category];
+    const salesCount = categoriesTurnover[category];
+    
+    if (inventoryValue === 0) return 0;
+    return salesCount / inventoryValue;
+  });
   
   // Create the chart
   const ctx = document.getElementById('inventory-turnover-chart').getContext('2d');
@@ -1132,8 +1131,8 @@ const addInventoryTurnoverChart = (products) => {
     data: {
       labels: categories,
       datasets: [{
-        label: 'Turnover Rate',
-        data: turnoverRates,
+        label: 'Turnover Ratio',
+        data: turnoverRatios,
         backgroundColor: 'rgba(75, 192, 192, 0.7)',
         borderColor: 'rgb(75, 192, 192)',
         borderWidth: 1
@@ -1145,33 +1144,32 @@ const addInventoryTurnoverChart = (products) => {
       plugins: {
         title: {
           display: true,
-          text: 'Inventory Turnover by Category'
-        },
-        tooltip: {
-          callbacks: {
-            label: function(context) {
-              return `Turnover: ${context.parsed.y.toFixed(2)}x`;
-            }
-          }
+          text: 'Inventory Turnover'
         }
       },
       scales: {
-        y: {
-          beginAtZero: true,
+        x: {
           title: {
             display: true,
-            text: 'Turnover Rate'
+            text: 'Category'
           }
+        },
+        y: {
+          title: {
+            display: true,
+            text: 'Turnover Ratio'
+          },
+          beginAtZero: true
         }
       }
     }
   });
 };
 
-// Add profit margin analysis chart
+// Add profit margin chart
 const addProfitMarginChart = (products) => {
   // Check if the container element exists
-  const container = document.querySelector('.grid-container');
+  const container = document.getElementById('additional-charts-container');
   if (!container) return;
   
   // Check if this chart already exists
@@ -1179,7 +1177,7 @@ const addProfitMarginChart = (products) => {
   
   // Create a new chart container
   const chartContainer = document.createElement('div');
-  chartContainer.className = 'grid-item full-width';
+  chartContainer.className = 'chart-grid-item full-width';
   chartContainer.innerHTML = `
     <div class="card">
       <div class="card-header">
@@ -1195,37 +1193,38 @@ const addProfitMarginChart = (products) => {
   container.appendChild(chartContainer);
   
   // Calculate profit margins by category
-  const categoryData = {};
+  const categoryProfits = {};
   
   products.forEach(product => {
     const category = product.category || 'Uncategorized';
     const costPrice = product.cost_price || 0;
     const sellingPrice = product.selling_price || 0;
+    const stock = product.current_stock || 0;
     
-    // Skip if no prices
-    if (costPrice === 0 && sellingPrice === 0) return;
+    const totalCost = costPrice * stock;
+    const totalRevenue = sellingPrice * stock;
+    const profit = totalRevenue - totalCost;
     
-    // Calculate profit margin as percentage
-    const profitMargin = costPrice > 0 ? ((sellingPrice - costPrice) / sellingPrice) * 100 : 0;
-    
-    if (!categoryData[category]) {
-      categoryData[category] = {
-        margins: [],
-        totalMargin: 0,
-        count: 0
+    if (!categoryProfits[category]) {
+      categoryProfits[category] = {
+        totalCost: 0,
+        totalRevenue: 0,
+        profit: 0
       };
     }
     
-    categoryData[category].margins.push(profitMargin);
-    categoryData[category].totalMargin += profitMargin;
-    categoryData[category].count++;
+    categoryProfits[category].totalCost += totalCost;
+    categoryProfits[category].totalRevenue += totalRevenue;
+    categoryProfits[category].profit += profit;
   });
   
-  // Calculate average, min, max margins for each category
-  const categories = Object.keys(categoryData);
-  const avgMargins = categories.map(cat => categoryData[cat].totalMargin / categoryData[cat].count);
-  const minMargins = categories.map(cat => Math.min(...categoryData[cat].margins));
-  const maxMargins = categories.map(cat => Math.max(...categoryData[cat].margins));
+  // Calculate margins
+  const categories = Object.keys(categoryProfits).sort();
+  const margins = categories.map(category => {
+    const { totalRevenue, profit } = categoryProfits[category];
+    if (totalRevenue === 0) return 0;
+    return (profit / totalRevenue) * 100;
+  });
   
   // Create the chart
   const ctx = document.getElementById('profit-margin-chart').getContext('2d');
@@ -1233,29 +1232,21 @@ const addProfitMarginChart = (products) => {
     type: 'bar',
     data: {
       labels: categories,
-      datasets: [
-        {
-          label: 'Average Profit Margin (%)',
-          data: avgMargins,
-          backgroundColor: 'rgba(54, 162, 235, 0.7)',
-          borderColor: 'rgb(54, 162, 235)',
-          borderWidth: 1
-        },
-        {
-          label: 'Minimum Margin',
-          data: minMargins,
-          backgroundColor: 'rgba(255, 99, 132, 0.7)',
-          borderColor: 'rgb(255, 99, 132)',
-          borderWidth: 1
-        },
-        {
-          label: 'Maximum Margin',
-          data: maxMargins,
-          backgroundColor: 'rgba(75, 192, 192, 0.7)',
-          borderColor: 'rgb(75, 192, 192)',
-          borderWidth: 1
-        }
-      ]
+      datasets: [{
+        label: 'Profit Margin (%)',
+        data: margins,
+        backgroundColor: margins.map(margin => 
+          margin < 0 ? 'rgba(255, 99, 132, 0.7)' : 
+          margin < 10 ? 'rgba(255, 205, 86, 0.7)' : 
+          'rgba(75, 192, 192, 0.7)'
+        ),
+        borderColor: margins.map(margin => 
+          margin < 0 ? 'rgb(255, 99, 132)' : 
+          margin < 10 ? 'rgb(255, 205, 86)' : 
+          'rgb(75, 192, 192)'
+        ),
+        borderWidth: 1
+      }]
     },
     options: {
       responsive: true,
@@ -1263,12 +1254,24 @@ const addProfitMarginChart = (products) => {
       plugins: {
         title: {
           display: true,
-          text: 'Profit Margins by Category'
+          text: 'Profit Margin by Category'
+        },
+        tooltip: {
+          callbacks: {
+            label: function(context) {
+              return context.dataset.label + ': ' + context.parsed.y.toFixed(2) + '%';
+            }
+          }
         }
       },
       scales: {
+        x: {
+          title: {
+            display: true,
+            text: 'Category'
+          }
+        },
         y: {
-          beginAtZero: true,
           title: {
             display: true,
             text: 'Profit Margin (%)'
@@ -1279,10 +1282,10 @@ const addProfitMarginChart = (products) => {
   });
 };
 
-// Add stock level comparison chart (current vs min stock)
+// Add stock level vs minimum stock comparison chart
 const addStockLevelComparisonChart = (products) => {
   // Check if the container element exists
-  const container = document.querySelector('.grid-container');
+  const container = document.getElementById('additional-charts-container');
   if (!container) return;
   
   // Check if this chart already exists
@@ -1290,11 +1293,11 @@ const addStockLevelComparisonChart = (products) => {
   
   // Create a new chart container
   const chartContainer = document.createElement('div');
-  chartContainer.className = 'grid-item full-width';
+  chartContainer.className = 'chart-grid-item full-width';
   chartContainer.innerHTML = `
     <div class="card">
       <div class="card-header">
-        <h3>Stock Level Analysis</h3>
+        <h3>Current Stock vs Minimum Stock Level</h3>
       </div>
       <div class="card-content chart-container">
         <canvas id="stock-comparison-chart"></canvas>
@@ -1305,22 +1308,23 @@ const addStockLevelComparisonChart = (products) => {
   // Add the new chart container to the grid
   container.appendChild(chartContainer);
   
-  // Get products with low stock or critical levels
-  const criticalProducts = products
-    .filter(p => p.current_stock <= p.min_stock_level)
-    .sort((a, b) => {
-      // Calculate stock ratio (current/min)
-      const ratioA = a.min_stock_level > 0 ? a.current_stock / a.min_stock_level : 0;
-      const ratioB = b.min_stock_level > 0 ? b.current_stock / b.min_stock_level : 0;
-      // Sort by ratio (lowest first)
-      return ratioA - ratioB;
+  // Get top products by stock gap percentage (current / min)
+  const filteredProducts = products
+    .filter(p => p.min_stock_level > 0 && p.current_stock >= 0)
+    .map(p => {
+      const ratio = p.current_stock / p.min_stock_level;
+      return {
+        ...p,
+        ratio
+      };
     })
-    .slice(0, 10); // Get top 10 most critical
+    .sort((a, b) => a.ratio - b.ratio)
+    .slice(0, 10);
   
   // Prepare data
-  const labels = criticalProducts.map(p => p.name);
-  const currentStocks = criticalProducts.map(p => p.current_stock || 0);
-  const minStocks = criticalProducts.map(p => p.min_stock_level || 0);
+  const labels = filteredProducts.map(p => p.name);
+  const currentStocks = filteredProducts.map(p => p.current_stock || 0);
+  const minStocks = filteredProducts.map(p => p.min_stock_level || 0);
   
   // Create the chart
   const ctx = document.getElementById('stock-comparison-chart').getContext('2d');
@@ -1337,7 +1341,7 @@ const addStockLevelComparisonChart = (products) => {
           borderWidth: 1
         },
         {
-          label: 'Minimum Required Stock',
+          label: 'Minimum Stock Level',
           data: minStocks,
           backgroundColor: 'rgba(255, 99, 132, 0.7)',
           borderColor: 'rgb(255, 99, 132)',
@@ -1352,19 +1356,28 @@ const addStockLevelComparisonChart = (products) => {
       plugins: {
         title: {
           display: true,
-          text: 'Critical Stock Levels'
+          text: 'Products Closest to Minimum Stock Level'
         },
         tooltip: {
           mode: 'index',
           intersect: false
+        },
+        legend: {
+          position: 'top',
         }
       },
       scales: {
         x: {
-          beginAtZero: true,
           title: {
             display: true,
-            text: 'Stock Quantity'
+            text: 'Quantity'
+          },
+          beginAtZero: true
+        },
+        y: {
+          title: {
+            display: true,
+            text: 'Products'
           }
         }
       }

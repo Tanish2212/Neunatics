@@ -8,6 +8,31 @@
     <link rel="stylesheet" href="../css/components.css">
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <style>
+        /* Additional styles to enhance chart layout */
+        .chart-grid-container {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 24px;
+            margin-bottom: 24px;
+        }
+        
+        .chart-grid-item {
+            width: 100%;
+        }
+        
+        .chart-grid-item.full-width {
+            grid-column: 1 / -1;
+        }
+        
+        .category-chart-container {
+            height: 400px;
+        }
+        
+        .chart-container {
+            height: 350px;
+        }
+    </style>
 </head>
 <body>
     <header>
@@ -38,8 +63,9 @@
         <section id="analytics-content">
             <h1 class="page-title">Analytics Dashboard</h1>
             
-            <div class="grid-container">
-                <div class="grid-item full-width">
+            <!-- First row: Inventory Value Trends (full width) -->
+            <div class="chart-grid-container">
+                <div class="chart-grid-item full-width">
                     <div class="card">
                         <div class="card-header">
                             <h3>Inventory Value Trends</h3>
@@ -49,18 +75,27 @@
                         </div>
                     </div>
                 </div>
-                
-                <div class="grid-item">
+            </div>
+            
+            <!-- Second row: Category Distribution (half width) and will be paired with other charts -->
+            <div class="chart-grid-container">
+                <div class="chart-grid-item">
                     <div class="card">
                         <div class="card-header">
                             <h3>Category Distribution</h3>
                         </div>
-                        <div class="card-content chart-container">
+                        <div class="card-content category-chart-container">
                             <canvas id="category-distribution-chart"></canvas>
                         </div>
                     </div>
                 </div>
+                
+                <!-- This empty div will be filled with stock level chart by JavaScript -->
+                <div class="chart-grid-item" id="stock-level-container"></div>
             </div>
+            
+            <!-- Additional charts will be added here by JavaScript -->
+            <div class="chart-grid-container" id="additional-charts-container"></div>
         </section>
     </main>
 
