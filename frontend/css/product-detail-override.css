@@ -1,0 +1,54 @@
+/* 
+   Product Detail Override CSS
+   This file contains styles to hide the Recent Activity section and notification panels
+   on the product detail page.
+*/
+
+/* Hide real-time updates notification at the bottom */
+.real-time-updates,
+#real-time-updates,
+[class*="real-time"],
+[id*="real-time"] {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    height: 0 !important;
+    width: 0 !important;
+    overflow: hidden !important;
+    position: absolute !important;
+    pointer-events: none !important;
+}
+
+/* Hide Recent Activity section */
+.dashboard-card h2,
+h3,
+h4,
+div,
+p,
+span:contains("Recent Activity"),
+.recent-activity,
+#recent-activity,
+.activity-list,
+#activity-list,
+[class*="activity-"],
+[id*="activity-"] {
+    display: none !important;
+}
+
+/* Hide notification panels */
+.notification-panel,
+#notification-panel,
+#stock-notification-panel,
+.notification-badge,
+#notification-badge,
+[class*="notification"],
+[id*="notification"] {
+    display: none !important;
+}
+
+/* Target the specific element shown in the screenshot */
+.dashboard-card:has(h2:contains("Recent Activity")),
+.card-content:has(ul.activity-list),
+div:has(> .notification-badge) {
+    display: none !important;
+} 

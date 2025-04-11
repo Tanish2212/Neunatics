@@ -6,8 +6,28 @@
     <title>Product Details - Food Inventory Management</title>
     <link rel="stylesheet" href="../css/main.css">
     <link rel="stylesheet" href="../css/components.css">
+    <link rel="stylesheet" href="../css/product-detail-override.css">
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <style>
+        /* Hide Recent Activity section and notification panel */
+        .dashboard-card:has(h2:contains("Recent Activity")),
+        .recent-activity-section,
+        #recent-activity-list,
+        .notification-panel,
+        #stock-notification-panel,
+        .real-time-updates {
+            display: none !important;
+        }
+        
+        /* Hide any dynamically added sections with 'activity' in class or ID */
+        [class*="activity"],
+        [id*="activity"],
+        [class*="notification"],
+        [id*="notification"] {
+            display: none !important;
+        }
+    </style>
 </head>
 <body>
     <header>
@@ -108,6 +128,31 @@
     <script src="../js/utils.js"></script>
     <script src="../js/api.js"></script>
     <script src="../js/websocket.js"></script>
+    <script src="../js/disable-real-time-updates.js"></script>
     <script src="../js/product-detail.js"></script>
+    <script>
+        // Override any functions that might be adding the Recent Activity section
+        document.addEventListener('DOMContentLoaded', () => {
+            // Remove any real-time updates elements that might be added dynamically
+            const removeElements = () => {
+                // Check for both notification panels and activity sections
+                const elementsToRemove = document.querySelectorAll(
+                    '.real-time-updates, .notification-panel, #stock-notification-panel, ' +
+                    '.recent-activity-section, #recent-activity-list, ' +
+                    '.dashboard-card h2:contains("Recent Activity")'
+                );
+                
+                elementsToRemove.forEach(el => {
+                    if (el && el.parentNode) {
+                        el.parentNode.removeChild(el);
+                    }
+                });
+            };
+            
+            // Run immediately and then periodically to catch dynamically added elements
+            removeElements();
+            setInterval(removeElements, 500);
+        });
+    </script>
 </body>
 </html>
