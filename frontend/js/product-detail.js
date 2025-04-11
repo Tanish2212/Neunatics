@@ -18,9 +18,6 @@ document.addEventListener('DOMContentLoaded', () => {
   
   // Setup event listeners
   setupEventListeners();
-  
-  // Setup WebSocket connections
-  setupWebSocketListeners();
 });
 
 // Load product details
@@ -40,9 +37,6 @@ const loadProductDetails = async () => {
     
     // Update UI with product details
     updateProductUI(productData);
-    
-    // Fetch product events history
-    loadProductEvents();
     
   } catch (error) {
     console.error('Error loading product details:', error);
@@ -101,96 +95,6 @@ const updateProductUI = (product) => {
   
   // Update page title
   document.title = `${product.name} - Food Inventory Management`;
-};
-
-// Load product events
-const loadProductEvents = async () => {
-  try {
-    // Generate events from activity logs related to this product
-    const response = await fetch(`/api/dashboard/activity`);
-    if (!response.ok) {
-      throw new Error('Failed to fetch activity data');
-    }
-    
-    const activityData = await response.json();
-    if (!activityData.success) {
-      throw new Error(activityData.message || 'Invalid activity data');
-    }
-    
-    // Filter activities for this product
-    const productEvents = activityData.data.filter(activity => 
-      activity.product_id === productId
-    );
-    
-    updateEventsUI(productEvents);
-  } catch (error) {
-    console.error('Error loading product events:', error);
-    showNotification(`Error loading product events: ${error.message}`, 'error');
-    // Show empty state
-    document.getElementById('product-events').innerHTML = '<p class="no-events">No recent activity available</p>';
-  }
-};
-
-// Update events UI
-const updateEventsUI = (events) => {
-  const eventsContainer = document.getElementById('product-events');
-  
-  if (!events || events.length === 0) {
-    eventsContainer.innerHTML = '<p class="no-events">No recent activity for this product</p>';
-    return;
-  }
-  
-  // Sort events by timestamp (newest first)
-  events.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-  
-  eventsContainer.innerHTML = events.map(event => {
-    const eventDate = formatTimeAgo(event.timestamp);
-    const actionType = event.action?.toLowerCase() || 'update';
-    
-    // Determine if stock changed and by how much
-    let stockChangeClass = '';
-    let stockChangeInfo = '';
-    
-    if (event.description && event.description.includes('Stock updated')) {
-      // Try to extract stock numbers from the description
-      const stockMatch = event.description.match(/from (\d+\.?\d*) to (\d+\.?\d*)/);
-      if (stockMatch && stockMatch.length >= 3) {
-        const oldValue = parseFloat(stockMatch[1]);
-        const newValue = parseFloat(stockMatch[2]);
-        const difference = newValue - oldValue;
-        
-        if (difference > 0) {
-          stockChangeClass = 'stock-increase';
-          stockChangeInfo = `<span class="stock-change increase">+${difference} ${productData?.unit || ''}</span>`;
-        } else if (difference < 0) {
-          stockChangeClass = 'stock-decrease';
-          stockChangeInfo = `<span class="stock-change decrease">${difference} ${productData?.unit || ''}</span>`;
-        }
-      }
-    }
-    
-    // Set appropriate class based on action type
-    let eventClassType = actionType;
-    if (actionType === 'create') {
-      eventClassType = 'create';
-    } else if (actionType === 'delete') {
-      eventClassType = 'delete';
-    } else if (stockChangeClass) {
-      eventClassType = stockChangeClass;
-    }
-    
-    return `
-      <div class="event-item ${eventClassType}">
-        <div class="event-header">
-          <span class="event-type ${actionType}">${formatEventType(actionType)}</span>
-          <span class="event-date">${eventDate}</span>
-        </div>
-        <div class="event-details">
-          <p>${event.description} ${stockChangeInfo}</p>
-        </div>
-      </div>
-    `;
-  }).join('');
 };
 
 // Setup event listeners
@@ -252,29 +156,6 @@ const deleteProduct = async (id) => {
     console.error('Error deleting product:', error);
     showNotification(`Error deleting product: ${error.message}`, 'error');
   }
-};
-
-// Setup WebSocket listeners
-const setupWebSocketListeners = () => {
-  // Connect to Socket.IO
-  connectWebSocket();
-  
-  // Listen for product updates
-  subscribeToEvent('product-update', (data) => {
-    if (data.id === productId || data.data?.id === productId) {
-      // Product was updated
-      loadProductDetails();
-      showNotification('Product information updated', 'info');
-    }
-  });
-  
-  // Listen for activity updates
-  subscribeToEvent('activity-update', (data) => {
-    if (data.product_id === productId) {
-      // New activity for this product
-      loadProductEvents();
-    }
-  });
 };
 
 // Format currency
